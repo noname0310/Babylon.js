@@ -1,14 +1,39 @@
 import { Observable } from "core/Misc/observable";
 import type { Scene } from "../scene";
 import { FlowGraph } from "./flowGraph";
+import type { IPathToObjectConverter } from "../ObjectModel/objectModelInterfaces";
+import { defaultValueParseFunction } from "./serialization";
+import type { IObjectAccessor } from "./typeDefinitions";
 
 /**
  * @experimental
  * Parameters used to create a flow graph engine.
  */
-export class IFlowGraphCoordinatorConfiguration {
+export interface IFlowGraphCoordinatorConfiguration {
     /**
      * The scene that the flow graph engine belongs to.
+     */
+    scene: Scene;
+}
+
+/**
+ * @experimental
+ * Parameters used to parse a flow graph coordinator.
+ */
+export interface FlowGraphCoordinatorParseOptions {
+    /**
+     * A function that will be called to parse the value of a property.
+     * @param key the key of the property
+     * @param serializationObject the serialization object where the property is located
+     * @param scene the scene that the block is being parsed in
+     */
+    valueParseFunction?: (key: string, serializationObject: any, scene: Scene) => any;
+    /**
+     * The path converter to use to convert the path to an object accessor.
+     */
+    pathConverter: IPathToObjectConverter<IObjectAccessor>;
+    /**
+     * The scene that the flow graph coordinator belongs to.
      */
     scene: Scene;
 }
@@ -27,14 +52,19 @@ export class FlowGraphCoordinator {
 
     private _customEventsMap: Map<string, Observable<any>> = new Map();
 
-    constructor(private _config: IFlowGraphCoordinatorConfiguration) {
+    public constructor(
+        /**
+         * the configuration of the block
+         */
+        public config: IFlowGraphCoordinatorConfiguration
+    ) {
         // When the scene is disposed, dispose all graphs currently running on it.
-        this._config.scene.onDisposeObservable.add(() => {
+        this.config.scene.onDisposeObservable.add(() => {
             this.dispose();
         });
 
         // Add itself to the SceneCoordinators list for the Inspector.
-        const coordinators = FlowGraphCoordinator.SceneCoordinators.get(this._config.scene) ?? [];
+        const coordinators = FlowGraphCoordinator.SceneCoordinators.get(this.config.scene) ?? [];
         coordinators.push(this);
     }
 
@@ -42,8 +72,8 @@ export class FlowGraphCoordinator {
      * Creates a new flow graph and adds it to the list of existing flow graphs
      * @returns a new flow graph
      */
-    createGraph(): FlowGraph {
-        const graph = new FlowGraph({ scene: this._config.scene, coordinator: this });
+    public createGraph(): FlowGraph {
+        const graph = new FlowGraph({ scene: this.config.scene, coordinator: this });
         this._flowGraphs.push(graph);
         return graph;
     }
@@ -52,7 +82,7 @@ export class FlowGraphCoordinator {
      * Removes a flow graph from the list of existing flow graphs and disposes it
      * @param graph the graph to remove
      */
-    removeGraph(graph: FlowGraph) {
+    public removeGraph(graph: FlowGraph) {
         const index = this._flowGraphs.indexOf(graph);
         if (index !== -1) {
             graph.dispose();
@@ -63,26 +93,31 @@ export class FlowGraphCoordinator {
     /**
      * Starts all graphs
      */
-    start() {
+    public start() {
         this._flowGraphs.forEach((graph) => graph.start());
     }
 
     /**
      * Disposes all graphs
      */
-    dispose() {
+    public dispose() {
         this._flowGraphs.forEach((graph) => graph.dispose());
         this._flowGraphs.length = 0;
 
         // Remove itself from the SceneCoordinators list for the Inspector.
-        const coordinators = FlowGraphCoordinator.SceneCoordinators.get(this._config.scene) ?? [];
+        const coordinators = FlowGraphCoordinator.SceneCoordinators.get(this.config.scene) ?? [];
         const index = coordinators.indexOf(this);
         if (index !== -1) {
             coordinators.splice(index, 1);
         }
     }
 
-    serialize(serializationObject: any, valueSerializeFunction?: (key: string, value: any, serializationObject: any) => void) {
+    /**
+     * Serializes this coordinator to a JSON object.
+     * @param serializationObject the object to serialize to
+     * @param valueSerializeFunction the function to use to serialize the value
+     */
+    public serialize(serializationObject: any, valueSerializeFunction?: (key: string, value: any, serializationObject: any) => void) {
         serializationObject._flowGraphs = [];
         this._flowGraphs.forEach((graph) => {
             const serializedGraph = {};
@@ -91,12 +126,26 @@ export class FlowGraphCoordinator {
         });
     }
 
-    public static Parse(serializedObject: any, scene: Scene, valueParseFunction?: (key: string, serializationObject: any, scene: Scene) => any) {
-        const coordinator = new FlowGraphCoordinator({ scene });
+    /**
+     * Parses a serialized coordinator.
+     * @param serializedObject the object to parse
+     * @param options the options to use when parsing
+     * @returns the parsed coordinator
+     */
+    public static Parse(serializedObject: any, options: FlowGraphCoordinatorParseOptions) {
+        const valueParseFunction = options.valueParseFunction ?? defaultValueParseFunction;
+        const coordinator = new FlowGraphCoordinator({ scene: options.scene });
         serializedObject._flowGraphs?.forEach((serializedGraph: any) => {
-            FlowGraph.Parse(serializedGraph, coordinator, valueParseFunction);
+            FlowGraph.Parse(serializedGraph, { coordinator, valueParseFunction, pathConverter: options.pathConverter });
         });
         return coordinator;
+    }
+
+    /**
+     * Gets the list of flow graphs
+     */
+    public get flowGraphs() {
+        return this._flowGraphs;
     }
 
     /**
@@ -104,7 +153,7 @@ export class FlowGraphCoordinator {
      * @param id the id of the event
      * @returns the observable for the event
      */
-    getCustomEventObservable(id: string): Observable<any> {
+    public getCustomEventObservable(id: string): Observable<any> {
         let observable = this._customEventsMap.get(id);
         if (!observable) {
             observable = new Observable<any>();
@@ -118,7 +167,7 @@ export class FlowGraphCoordinator {
      * @param id the id of the event
      * @param data the data to send with the event
      */
-    notifyCustomEvent(id: string, data: any) {
+    public notifyCustomEvent(id: string, data: any) {
         const observable = this._customEventsMap.get(id);
         if (observable) {
             observable.notifyObservers(data);

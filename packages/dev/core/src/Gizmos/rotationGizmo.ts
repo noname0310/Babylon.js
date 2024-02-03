@@ -21,6 +21,8 @@ import type { GizmoManager } from "./gizmoManager";
  * Interface for rotation gizmo
  */
 export interface IRotationGizmo extends IGizmo {
+    /** True when the mouse pointer is dragging a gizmo mesh */
+    readonly isDragging: boolean;
     /** Internal gizmo used for interactions on the x axis */
     xGizmo: IPlaneRotationGizmo;
     /** Internal gizmo used for interactions on the y axis */
@@ -43,6 +45,10 @@ export interface IRotationGizmo extends IGizmo {
      * @param cache Gizmo axis definition used for reactive gizmo UI
      */
     addToAxisCache(mesh: Mesh, cache: GizmoAxisCache): void;
+    /**
+     * Force release the drag action by code
+     */
+    releaseDrag(): void;
 }
 
 /**
@@ -147,7 +153,7 @@ export class RotationGizmo extends Gizmo implements IRotationGizmo {
 
     protected _checkBillboardTransform() {
         if (this._nodeAttached && (<TransformNode>this._nodeAttached).billboardMode) {
-            console.log("Rotation Gizmo will not work with transforms in billboard mode.");
+            Logger.Log("Rotation Gizmo will not work with transforms in billboard mode.");
         }
     }
 
@@ -170,11 +176,14 @@ export class RotationGizmo extends Gizmo implements IRotationGizmo {
      * True when the mouse pointer is hovering a gizmo mesh
      */
     public get isHovered() {
-        let hovered = false;
-        [this.xGizmo, this.yGizmo, this.zGizmo].forEach((gizmo) => {
-            hovered = hovered || gizmo.isHovered;
-        });
-        return hovered;
+        return this.xGizmo.isHovered || this.yGizmo.isHovered || this.zGizmo.isHovered;
+    }
+
+    /**
+     * True when the mouse pointer is dragging a gizmo mesh
+     */
+    public get isDragging() {
+        return this.xGizmo.dragBehavior.dragging || this.yGizmo.dragBehavior.dragging || this.zGizmo.dragBehavior.dragging;
     }
 
     /**
@@ -339,6 +348,15 @@ export class RotationGizmo extends Gizmo implements IRotationGizmo {
      */
     public addToAxisCache(mesh: Mesh, cache: GizmoAxisCache) {
         this._gizmoAxisCache.set(mesh, cache);
+    }
+
+    /**
+     * Force release the drag action by code
+     */
+    public releaseDrag() {
+        this.xGizmo.dragBehavior.releaseDrag();
+        this.yGizmo.dragBehavior.releaseDrag();
+        this.zGizmo.dragBehavior.releaseDrag();
     }
 
     /**

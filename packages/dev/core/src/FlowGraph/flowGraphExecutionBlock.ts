@@ -13,20 +13,21 @@ export abstract class FlowGraphExecutionBlock extends FlowGraphBlock {
     /**
      * Input connection: The input signal of the block.
      */
-    public readonly onStart: FlowGraphSignalConnection;
-
+    public readonly in: FlowGraphSignalConnection;
+    /**
+     * Input connections that activate the block.
+     */
     public signalInputs: FlowGraphSignalConnection[];
+    /**
+     * Output connections that can activate downstream blocks.
+     */
     public signalOutputs: FlowGraphSignalConnection[];
 
     protected constructor(config?: IFlowGraphBlockConfiguration) {
         super(config);
-        this.onStart = this._registerSignalInput("onStart");
-    }
-
-    public configure() {
-        super.configure();
         this.signalInputs = [];
         this.signalOutputs = [];
+        this.in = this._registerSignalInput("in");
     }
 
     /**
@@ -47,6 +48,28 @@ export abstract class FlowGraphExecutionBlock extends FlowGraphBlock {
         return output;
     }
 
+    /**
+     * Given a name of a signal input, return that input if it exists
+     * @param name the name of the input
+     * @returns if the input exists, the input. Otherwise, undefined.
+     */
+    public getSignalInput(name: string): FlowGraphSignalConnection | undefined {
+        return this.signalInputs.find((input) => input.name === name);
+    }
+
+    /**
+     * Given a name of a signal output, return that input if it exists
+     * @param name the name of the input
+     * @returns if the input exists, the input. Otherwise, undefined.
+     */
+    public getSignalOutput(name: string): FlowGraphSignalConnection | undefined {
+        return this.signalOutputs.find((output) => output.name === name);
+    }
+
+    /**
+     * Serializes this block
+     * @param serializationObject the object to serialize in
+     */
     public serialize(serializationObject: any = {}) {
         super.serialize(serializationObject);
         serializationObject.signalInputs = [];
@@ -63,18 +86,33 @@ export abstract class FlowGraphExecutionBlock extends FlowGraphBlock {
         }
     }
 
-    public getClassName(): string {
-        return "FGExecutionBlock";
-    }
-
-    public static Parse(serializationObject: any = {}) {
-        const block = super.Parse(serializationObject) as FlowGraphExecutionBlock;
+    /**
+     * Deserializes from an object
+     * @param serializationObject the object to deserialize from
+     */
+    public deserialize(serializationObject: any) {
         for (let i = 0; i < serializationObject.signalInputs.length; i++) {
-            block.signalInputs[i].deserialize(serializationObject.signalInputs[i]);
+            const signalInput = this.getSignalInput(serializationObject.signalInputs[i].name);
+            if (signalInput) {
+                signalInput.deserialize(serializationObject.signalInputs[i]);
+            } else {
+                throw new Error("Could not find signal input with name " + serializationObject.signalInputs[i].name + " in block " + serializationObject.className);
+            }
         }
         for (let i = 0; i < serializationObject.signalOutputs.length; i++) {
-            block.signalOutputs[i].deserialize(serializationObject.signalOutputs[i]);
+            const signalOutput = this.getSignalOutput(serializationObject.signalOutputs[i].name);
+            if (signalOutput) {
+                signalOutput.deserialize(serializationObject.signalOutputs[i]);
+            } else {
+                throw new Error("Could not find signal output with name " + serializationObject.signalOutputs[i].name + " in block " + serializationObject.className);
+            }
         }
-        return block;
+    }
+
+    /**
+     * @returns the class name
+     */
+    public getClassName(): string {
+        return "FGExecutionBlock";
     }
 }

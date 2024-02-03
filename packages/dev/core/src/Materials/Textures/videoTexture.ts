@@ -85,7 +85,7 @@ export class VideoTexture extends Texture {
      */
     public readonly video: HTMLVideoElement;
 
-    private _externalTexture: Nullable<ExternalTexture>;
+    private _externalTexture: Nullable<ExternalTexture> = null;
     private _onUserActionRequestedObservable: Nullable<Observable<Texture>> = null;
 
     /**
@@ -192,7 +192,10 @@ export class VideoTexture extends Texture {
         this._currentSrc = src;
         this.name = name || this._getName(src);
         this.video = this._getVideo(src);
-        this._externalTexture = this._engine?.createExternalTexture(this.video) ?? null;
+        if (this._engine?.createExternalTexture) {
+            this._externalTexture = this._engine.createExternalTexture(this.video);
+        }
+
         if (!this._settings.independentVideoSource) {
             if (this._settings.poster) {
                 this.video.poster = this._settings.poster;
@@ -210,6 +213,7 @@ export class VideoTexture extends Texture {
             this.video.setAttribute("playsinline", "");
             this.video.addEventListener("paused", this._updateInternalTexture);
             this.video.addEventListener("seeked", this._updateInternalTexture);
+            this.video.addEventListener("loadeddata", this._updateInternalTexture);
             this.video.addEventListener("emptied", this._reset);
 
             if (this._settings.autoPlay) {
@@ -444,6 +448,7 @@ export class VideoTexture extends Texture {
         if (!this._settings.independentVideoSource) {
             this.video.removeEventListener("paused", this._updateInternalTexture);
             this.video.removeEventListener("seeked", this._updateInternalTexture);
+            this.video.removeEventListener("loadeddata", this._updateInternalTexture);
             this.video.removeEventListener("emptied", this._reset);
             this.video.removeEventListener("resize", this._resizeInternalTexture);
             this.video.pause();

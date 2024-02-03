@@ -294,12 +294,12 @@ export class SSAO2RenderingPipeline extends PostProcessRenderPipeline {
         if (this._forceGeometryBuffer) {
             scene.enableGeometryBufferRenderer();
             if (scene.geometryBufferRenderer?.generateNormalsInWorldSpace) {
-                console.error("SSAO2RenderingPipeline does not support generateNormalsInWorldSpace=true for the geometry buffer renderer!");
+                Logger.Error("SSAO2RenderingPipeline does not support generateNormalsInWorldSpace=true for the geometry buffer renderer!");
             }
         } else {
             scene.enablePrePassRenderer();
             if (scene.prePassRenderer?.generateNormalsInWorldSpace) {
-                console.error("SSAO2RenderingPipeline does not support generateNormalsInWorldSpace=true for the prepass renderer!");
+                Logger.Error("SSAO2RenderingPipeline does not support generateNormalsInWorldSpace=true for the prepass renderer!");
             }
         }
 
@@ -382,7 +382,7 @@ export class SSAO2RenderingPipeline extends PostProcessRenderPipeline {
 
     /**
      * Removes the internal pipeline assets and detaches the pipeline from the scene cameras
-     * @param disableGeometryBufferRenderer
+     * @param disableGeometryBufferRenderer Set to true if you want to disable the Geometry Buffer renderer
      */
     public dispose(disableGeometryBufferRenderer: boolean = false): void {
         for (let i = 0; i < this._scene.cameras.length; i++) {

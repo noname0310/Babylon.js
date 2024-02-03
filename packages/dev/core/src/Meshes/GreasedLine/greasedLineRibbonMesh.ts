@@ -8,6 +8,7 @@ import { DeepCopier } from "../../Misc/deepCopier";
 import { GreasedLineTools } from "../../Misc/greasedLineTools";
 import type { GreasedLineMeshOptions, GreasedLineRibbonOptions } from "./greasedLineBaseMesh";
 import { GreasedLineBaseMesh, GreasedLineRibbonAutoDirectionMode, GreasedLineRibbonFacesMode, GreasedLineRibbonPointsMode } from "./greasedLineBaseMesh";
+import type { VertexData } from "../mesh.vertexData";
 
 Mesh._GreasedLineRibbonMeshParser = (parsedMesh: any, scene: Scene): Mesh => {
     return GreasedLineRibbonMesh.Parse(parsedMesh, scene);
@@ -67,6 +68,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
         super(name, scene, _options);
 
         if (!_options.ribbonOptions) {
+            // eslint-disable-next-line no-throw-literal
             throw "'GreasedLineMeshOptions.ribbonOptions' is not set.";
         }
 
@@ -85,9 +87,12 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
     /**
      * Adds new points to the line. It doesn't rerenders the line if in lazy mode.
      * @param points points table
+     * @param options mesh options
+     * @param hasPathOptions defaults to false
      */
     public override addPoints(points: number[][], options: GreasedLineMeshOptions, hasPathOptions = false) {
         if (!options.ribbonOptions) {
+            // eslint-disable-next-line no-throw-literal
             throw "addPoints() on GreasedLineRibbonMesh instance requires 'GreasedLineMeshOptions.ribbonOptions'.";
         }
 
@@ -163,6 +168,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
 
     protected _setPoints(points: number[][], _options: GreasedLineMeshOptions) {
         if (!this._options.ribbonOptions) {
+            // eslint-disable-next-line no-throw-literal
             throw "No 'GreasedLineMeshOptions.ribbonOptions' provided.";
         }
         this._points = points;
@@ -181,6 +187,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
             } else {
                 if (pathOptions.ribbonOptions?.directionsAutoMode === GreasedLineRibbonAutoDirectionMode.AUTO_DIRECTIONS_NONE) {
                     if (!pathOptions.ribbonOptions!.directions) {
+                        // eslint-disable-next-line no-throw-literal
                         throw "In GreasedLineRibbonAutoDirectionMode.AUTO_DIRECTIONS_NONE 'GreasedLineMeshOptions.ribbonOptions.directions' must be defined.";
                     }
                     directionPlanes = GreasedLineRibbonMesh._GetDirectionPlanesFromDirectionsOption(subPoints.length, pathOptions.ribbonOptions!.directions);
@@ -214,6 +221,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
     private static _CreateRibbonVertexData(pathArray: Vector3[][], options: GreasedLineMeshOptions) {
         const numOfPaths = pathArray.length;
         if (numOfPaths < 2) {
+            // eslint-disable-next-line no-throw-literal
             throw "Minimum of two paths are required to create a GreasedLineRibbonMesh.";
         }
 
@@ -288,6 +296,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
         const positions = ribbonVertexData.positions;
 
         if (!this._options.widths) {
+            // eslint-disable-next-line no-throw-literal
             throw "No 'GreasedLineMeshOptions.widths' table is specified.";
         }
 
@@ -351,6 +360,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
 
     private static _ConvertToRibbonPath(points: number[], ribbonInfo: GreasedLineRibbonOptions, rightHandedSystem: boolean, directionPlane?: Vector3) {
         if (ribbonInfo.pointsMode === GreasedLineRibbonPointsMode.POINTS_MODE_POINTS && !ribbonInfo.width) {
+            // eslint-disable-next-line no-throw-literal
             throw "'GreasedLineMeshOptions.ribbonOptiosn.width' must be specified in GreasedLineRibbonPointsMode.POINTS_MODE_POINTS.";
         }
         const path1 = [];
@@ -528,7 +538,7 @@ export class GreasedLineRibbonMesh extends GreasedLineBaseMesh {
         return slopes;
     }
 
-    protected _createVertexBuffers() {
+    protected _createVertexBuffers(): VertexData {
         this._uvs = this._options.uvs ?? this._uvs;
         const vertexData = super._createVertexBuffers(this._options.ribbonOptions?.smoothShading);
 

@@ -357,6 +357,7 @@ export class Engine extends ThinEngine {
         }
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Method called to create the default loading screen.
      * This can be overridden in your own app.
@@ -1087,6 +1088,9 @@ export class Engine extends ThinEngine {
         this._drawCalls.addCount(numDrawCalls, false);
     }
 
+    public _loadFileAsync(url: string, offlineProvider?: IOfflineProvider, useArrayBuffer?: false): Promise<string>;
+    public _loadFileAsync(url: string, offlineProvider?: IOfflineProvider, useArrayBuffer?: true): Promise<ArrayBuffer>;
+
     /**
      * @internal
      */
@@ -1194,16 +1198,26 @@ export class Engine extends ThinEngine {
         for (const scene of this.scenes) {
             scene.resetCachedMaterial();
             scene._rebuildGeometries();
-            scene._rebuildTextures();
         }
 
         for (const scene of this._virtualScenes) {
             scene.resetCachedMaterial();
             scene._rebuildGeometries();
-            scene._rebuildTextures();
         }
 
         super._rebuildBuffers();
+    }
+
+    protected _rebuildTextures(): void {
+        for (const scene of this.scenes) {
+            scene._rebuildTextures();
+        }
+
+        for (const scene of this._virtualScenes) {
+            scene._rebuildTextures();
+        }
+
+        super._rebuildTextures();
     }
 
     /** @internal */

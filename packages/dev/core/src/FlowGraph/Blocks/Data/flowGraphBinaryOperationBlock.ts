@@ -9,8 +9,14 @@ import { FlowGraphCachedOperationBlock } from "./flowGraphCachedOperationBlock";
  * LeftT, one of type RightT, and outputs a value of type ResultT.
  */
 export class FlowGraphBinaryOperationBlock<LeftT, RightT, ResultT> extends FlowGraphCachedOperationBlock<ResultT> {
-    leftInput: FlowGraphDataConnection<LeftT>;
-    rightInput: FlowGraphDataConnection<RightT>;
+    /**
+     * First input of this block
+     */
+    a: FlowGraphDataConnection<LeftT>;
+    /**
+     * Second input of this block
+     */
+    b: FlowGraphDataConnection<RightT>;
 
     constructor(
         leftRichType: RichType<LeftT>,
@@ -21,14 +27,23 @@ export class FlowGraphBinaryOperationBlock<LeftT, RightT, ResultT> extends FlowG
         config?: IFlowGraphBlockConfiguration
     ) {
         super(resultRichType, config);
-        this.leftInput = this.registerDataInput("leftInput", leftRichType);
-        this.rightInput = this.registerDataInput("rightInput", rightRichType);
+        this.a = this.registerDataInput("a", leftRichType);
+        this.b = this.registerDataInput("b", rightRichType);
     }
 
+    /**
+     * the operation performed by this block
+     * @param context the graph context
+     * @returns the result of the operation
+     */
     public override _doOperation(context: FlowGraphContext): ResultT {
-        return this._operation(this.leftInput.getValue(context), this.rightInput.getValue(context));
+        return this._operation(this.a.getValue(context), this.b.getValue(context));
     }
 
+    /**
+     * Gets the class name of this block
+     * @returns the class name
+     */
     public getClassName(): string {
         return this._className;
     }

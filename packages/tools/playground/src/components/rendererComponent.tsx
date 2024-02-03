@@ -34,6 +34,7 @@ export class RenderingComponent extends React.Component<IRenderingComponentProps
 
         // Create the global handleException
         (window as any).handleException = (e: Error) => {
+            // eslint-disable-next-line no-console
             console.error(e);
             this.props.globalState.onErrorObservable.notifyObservers(e);
         };
@@ -87,7 +88,8 @@ export class RenderingComponent extends React.Component<IRenderingComponentProps
     private async _loadScriptAsync(url: string): Promise<void> {
         return new Promise((resolve) => {
             const script = document.createElement("script");
-            script.src = url;
+            script.setAttribute("type", "text/javascript");
+            script.setAttribute("src", url);
             script.onload = () => {
                 resolve();
             };
@@ -190,11 +192,18 @@ export class RenderingComponent extends React.Component<IRenderingComponentProps
                 havokInit = "globalThis.HK = await HavokPhysics();";
             }
 
+            const unityToolkit =
+                !this._unityToolkitWasLoaded &&
+                (code.includes("UNITY.SceneManager.InitializePlayground") ||
+                    code.includes("SM.InitializePlayground") ||
+                    location.href.indexOf("UnityToolkit") !== -1 ||
+                    Utilities.ReadBoolFromStore("unity-toolkit", false));
             // Check for Unity Toolkit
-            if ((location.href.indexOf("UnityToolkit") !== -1 || Utilities.ReadBoolFromStore("unity-toolkit", false)) && !this._unityToolkitWasLoaded) {
-                await this._loadScriptAsync("/libs/babylon.manager.js");
+            if (unityToolkit) {
+                await this._loadScriptAsync("https://cdn.jsdelivr.net/gh/BabylonJS/UnityExporter@master/Redist/Runtime/babylon.toolkit.js");
                 this._unityToolkitWasLoaded = true;
             }
+            Utilities.StoreBoolToStore("unity-toolkit-used", unityToolkit);
 
             let createEngineFunction = "createDefaultEngine";
             let createSceneFunction = "";
@@ -361,6 +370,7 @@ export class RenderingComponent extends React.Component<IRenderingComponentProps
                 });
             }
         } catch (err) {
+            // eslint-disable-next-line no-console
             console.error(err, "Retrying if possible. If this error persists please notify the team.");
             this.props.globalState.onErrorObservable.notifyObservers(this._tmpErrorEvent || err);
         }

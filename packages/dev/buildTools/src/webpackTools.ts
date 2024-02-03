@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type ts from "typescript";
 import transformer from "./pathTransform.js";
 import type { BuildType, DevPackageName, UMDPackageName } from "./packageMapping.js";
@@ -183,6 +184,7 @@ export const commonDevWebpackConfiguration = (
                   hot: (env.enableHotReload !== undefined || process.env.ENABLE_HOT_RELOAD === "true") && !production ? true : false,
                   liveReload: (env.enableLiveReload !== undefined || process.env.ENABLE_LIVE_RELOAD === "true") && !production ? true : false,
                   headers: {
+                      // eslint-disable-next-line @typescript-eslint/naming-convention
                       "Access-Control-Allow-Origin": "*",
                   },
                   client: {

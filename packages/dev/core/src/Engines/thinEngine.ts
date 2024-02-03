@@ -212,6 +212,7 @@ export class ThinEngine {
         { key: "Mac OS.+Chrome/71", capture: null, captureConstraint: null, targets: ["vao"] },
         { key: "Mac OS.+Chrome/72", capture: null, captureConstraint: null, targets: ["vao"] },
         { key: "Mac OS.+Chrome", capture: null, captureConstraint: null, targets: ["uniformBuffer"] },
+        { key: "Chrome/12\\d\\..+?Mobile", capture: null, captureConstraint: null, targets: ["uniformBuffer"] },
         // desktop osx safari 15.4
         { key: ".*AppleWebKit.*(15.4).*Safari", capture: null, captureConstraint: null, targets: ["antialias", "maxMSAASamples"] },
         // mobile browsers using safari 15.4 on ios
@@ -226,14 +227,14 @@ export class ThinEngine {
      */
     // Not mixed with Version for tooling purpose.
     public static get NpmPackage(): string {
-        return "babylonjs@6.33.0";
+        return "babylonjs@6.41.0";
     }
 
     /**
      * Returns the current version of the framework
      */
     public static get Version(): string {
-        return "6.33.0";
+        return "6.41.0";
     }
 
     /**
@@ -1007,7 +1008,7 @@ export class ThinEngine {
         // }
 
         const versionToLog = `Babylon.js v${ThinEngine.Version}`;
-        console.log(versionToLog + ` - ${this.description}`);
+        Logger.Log(versionToLog + ` - ${this.description}`);
 
         // Check setAttribute in case of workers
         if (this._renderingCanvas && this._renderingCanvas.setAttribute) {
@@ -1042,6 +1043,10 @@ export class ThinEngine {
         // Adding a timeout to avoid race condition at browser level
         setTimeout(async () => {
             this._dummyFramebuffer = null;
+            this._emptyTexture = null;
+            this._emptyCubeTexture = null;
+            this._emptyTexture3D = null;
+            this._emptyTexture2DArray = null;
 
             const depthTest = this._depthCullingState.depthTest; // backup those values because the call to initEngine / wipeCaches will reset them
             const depthFunc = this._depthCullingState.depthFunc;
@@ -1066,6 +1071,8 @@ export class ThinEngine {
             this._rebuildBuffers();
             // Rebuild textures
             this._rebuildInternalTextures();
+            // Rebuild textures
+            this._rebuildTextures();
             // Rebuild textures
             this._rebuildRenderTargetWrappers();
 
@@ -1119,7 +1126,6 @@ export class ThinEngine {
             const effect = <Effect>this._compiledEffects[key];
 
             effect._pipelineContext = null; // because _prepareEffect will try to dispose this pipeline before recreating it and that would lead to webgl errors
-            effect._wasPreviouslyReady = false;
             effect._prepareEffect();
         }
 
@@ -1145,13 +1151,11 @@ export class ThinEngine {
     protected _rebuildBuffers(): void {
         // Uniforms
         for (const uniformBuffer of this._uniformBuffers) {
-            uniformBuffer._rebuild();
-        }
-        // Storage buffers
-        for (const storageBuffer of this._storageBuffers) {
-            storageBuffer._rebuild();
+            uniformBuffer._rebuildAfterContextLost();
         }
     }
+
+    protected _rebuildTextures(): void {}
 
     protected _initGLContext(): void {
         // Caps
@@ -1195,6 +1199,7 @@ export class ThinEngine {
             maxMSAASamples: 1,
             colorBufferFloat: !!(this._webGLVersion > 1 && this._gl.getExtension("EXT_color_buffer_float")),
             supportFloatTexturesResolve: false,
+            rg11b10ufColorRenderable: false,
             colorBufferHalfFloat: !!(this._webGLVersion > 1 && this._gl.getExtension("EXT_color_buffer_half_float")),
             textureFloat: this._webGLVersion > 1 || this._gl.getExtension("OES_texture_float") ? true : false,
             textureHalfFloat: this._webGLVersion > 1 || this._gl.getExtension("OES_texture_half_float") ? true : false,
@@ -1221,6 +1226,7 @@ export class ThinEngine {
         };
 
         this._caps.supportFloatTexturesResolve = this._caps.colorBufferFloat;
+        this._caps.rg11b10ufColorRenderable = this._caps.colorBufferFloat;
 
         // Infos
         this._glVersion = this._gl.getParameter(this._gl.VERSION);
@@ -1422,7 +1428,7 @@ export class ThinEngine {
 
     protected _initFeatures(): void {
         this._features = {
-            forceBitmapOverHTMLImageElement: false,
+            forceBitmapOverHTMLImageElement: typeof HTMLImageElement === "undefined",
             supportRenderAndCopyToLodForFloatTextures: this._webGLVersion !== 1,
             supportDepthStencilTexture: this._webGLVersion !== 1,
             supportShadowSamplers: this._webGLVersion !== 1,
@@ -2160,16 +2166,16 @@ export class ThinEngine {
 
     /**
      * Creates a vertex buffer
-     * @param data the data for the vertex buffer
+     * @param data the data or size for the vertex buffer
      * @param _updatable whether the buffer should be created as updatable
      * @param _label defines the label of the buffer (for debug purpose)
      * @returns the new WebGL static buffer
      */
-    public createVertexBuffer(data: DataArray, _updatable?: boolean, _label?: string): DataBuffer {
+    public createVertexBuffer(data: DataArray | number, _updatable?: boolean, _label?: string): DataBuffer {
         return this._createVertexBuffer(data, this._gl.STATIC_DRAW);
     }
 
-    private _createVertexBuffer(data: DataArray, usage: number): DataBuffer {
+    private _createVertexBuffer(data: DataArray | number, usage: number): DataBuffer {
         const vbo = this._gl.createBuffer();
 
         if (!vbo) {
@@ -2179,10 +2185,17 @@ export class ThinEngine {
         const dataBuffer = new WebGLDataBuffer(vbo);
         this.bindArrayBuffer(dataBuffer);
 
-        if (data instanceof Array) {
-            this._gl.bufferData(this._gl.ARRAY_BUFFER, new Float32Array(data), usage);
+        if (typeof data !== "number") {
+            if (data instanceof Array) {
+                this._gl.bufferData(this._gl.ARRAY_BUFFER, new Float32Array(data), usage);
+                dataBuffer.capacity = data.length * 4;
+            } else {
+                this._gl.bufferData(this._gl.ARRAY_BUFFER, <ArrayBuffer>data, usage);
+                dataBuffer.capacity = data.byteLength;
+            }
         } else {
-            this._gl.bufferData(this._gl.ARRAY_BUFFER, <ArrayBuffer>data, usage);
+            this._gl.bufferData(this._gl.ARRAY_BUFFER, new Uint8Array(data), usage);
+            dataBuffer.capacity = data;
         }
 
         this._resetVertexBufferBinding();
@@ -2197,7 +2210,7 @@ export class ThinEngine {
      * @param _label defines the label of the buffer (for debug purpose)
      * @returns the new WebGL dynamic buffer
      */
-    public createDynamicVertexBuffer(data: DataArray, _label?: string): DataBuffer {
+    public createDynamicVertexBuffer(data: DataArray | number, _label?: string): DataBuffer {
         return this._createVertexBuffer(data, this._gl.DYNAMIC_DRAW);
     }
 
@@ -4198,7 +4211,7 @@ export class ThinEngine {
                     texture.onLoadedObservable.remove(onLoadObserver);
                 }
 
-                if (EngineStore.UseFallbackTexture) {
+                if (EngineStore.UseFallbackTexture && url !== EngineStore.FallbackTexture) {
                     this._createTextureBase(
                         EngineStore.FallbackTexture,
                         noMipmap,
@@ -4391,6 +4404,8 @@ export class ThinEngine {
                 const gl = this._gl;
                 const isPot = img.width === potWidth && img.height === potHeight;
 
+                texture._creationFlags = creationFlags ?? 0;
+
                 const tip = this._getTexImageParametersForCreateTexture(format, extension, texture._useSRGBBuffer);
                 if (isPot) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, tip.internalFormat, tip.format, tip.type, img as any);
@@ -4505,6 +4520,7 @@ export class ThinEngine {
      */
     public _rescaleTexture(source: InternalTexture, destination: InternalTexture, scene: Nullable<any>, internalFormat: number, onComplete: () => void): void {}
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a raw texture
      * @param data defines the data to store in the texture
@@ -4536,6 +4552,7 @@ export class ThinEngine {
         throw _WarnImport("Engine.RawTexture");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a new raw cube texture
      * @param data defines the array of data to use to create each face
@@ -4561,6 +4578,7 @@ export class ThinEngine {
         throw _WarnImport("Engine.RawTexture");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a new raw 3D texture
      * @param data defines the data used to create the texture
@@ -4590,6 +4608,7 @@ export class ThinEngine {
         throw _WarnImport("Engine.RawTexture");
     }
 
+    // eslint-disable-next-line jsdoc/require-returns-check
     /**
      * Creates a new raw 2D array texture
      * @param data defines the data used to create the texture
@@ -5197,7 +5216,8 @@ export class ThinEngine {
 
             if (texture && texture.isMultiview) {
                 //this._gl.bindTexture(target, texture ? texture._colorTextureArray : null);
-                console.error(target, texture);
+                Logger.Error(["_bindTextureDirectly called with a multiview texture!", target, texture]);
+                // eslint-disable-next-line no-throw-literal
                 throw "_bindTextureDirectly called with a multiview texture!";
             } else {
                 this._gl.bindTexture(target, texture?._hardwareTexture?.underlyingResource ?? null);

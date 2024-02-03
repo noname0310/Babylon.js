@@ -13,6 +13,7 @@ import { UniqueIdGenerator } from "../../Misc/uniqueIdGenerator";
 import type { Scene } from "../../scene";
 import { GetClass } from "../../Misc/typeStore";
 import type { EffectFallbacks } from "../effectFallbacks";
+import { Logger } from "core/Misc/logger";
 
 /**
  * Defines a block that can be used inside a node based material
@@ -256,7 +257,9 @@ export class NodeMaterialBlock {
         return "NodeMaterialBlock";
     }
 
-    /** Gets a boolean indicating that this connection will be used in the fragment shader */
+    /** Gets a boolean indicating that this connection will be used in the fragment shader
+     * @returns true if connected in fragment shader
+     */
     public isConnectedInFragmentShader() {
         return this.outputs.some((o) => o.isConnectedInFragmentShader);
     }
@@ -411,6 +414,7 @@ export class NodeMaterialBlock {
                 output.connectTo(input);
                 notFound = false;
             } else if (!output) {
+                // eslint-disable-next-line no-throw-literal
                 throw "Unable to find a compatible match";
             } else {
                 output = this.getSiblingOutput(output);
@@ -659,7 +663,7 @@ export class NodeMaterialBlock {
 
         // Logs
         if (state.sharedData.verbose) {
-            console.log(`${state.target === NodeMaterialBlockTargets.Vertex ? "Vertex shader" : "Fragment shader"}: Building ${this.name} [${this.getClassName()}]`);
+            Logger.Log(`${state.target === NodeMaterialBlockTargets.Vertex ? "Vertex shader" : "Fragment shader"}: Building ${this.name} [${this.getClassName()}]`);
         }
 
         // Checks final outputs

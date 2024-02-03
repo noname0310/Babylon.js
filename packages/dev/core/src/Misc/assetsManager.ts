@@ -266,6 +266,7 @@ export class ContainerAssetTask extends AbstractAssetTask {
      * @param meshesNames defines the list of mesh's names you want to load
      * @param rootUrl defines the root url to use as a base to load your meshes and associated resources
      * @param sceneFilename defines the filename or File of the scene to load from
+     * @param extension defines the extension to use to load the scene (if not defined, ".babylon" will be used)
      */
     constructor(
         /**
@@ -362,6 +363,7 @@ export class MeshAssetTask extends AbstractAssetTask {
      * @param meshesNames defines the list of mesh's names you want to load
      * @param rootUrl defines the root url to use as a base to load your meshes and associated resources
      * @param sceneFilename defines the filename or File of the scene to load from
+     * @param extension defines the extension to use to load the scene (if not defined, ".babylon" will be used)
      */
     constructor(
         /**
@@ -446,6 +448,7 @@ export class AnimationAssetTask extends AbstractAssetTask {
      * @param rootUrl defines the root url to use as a base to load your meshes and associated resources
      * @param filename defines the filename or File of the scene to load from
      * @param targetConverter defines a function used to convert animation targets from loaded scene to current scene (default: search node by name)
+     * @param extension defines the extension to use to load the scene (if not defined, ".babylon" will be used)
      */
     constructor(
         /**
@@ -1243,7 +1246,7 @@ export class AssetsManager {
             this.onProgressObservable.notifyObservers(new AssetsProgressEvent(this._waitingTasksCount, this._totalTasksCount, task));
         } catch (e) {
             Logger.Error("Error running progress callbacks.");
-            console.log(e);
+            Logger.Log(e);
         }
 
         if (this._waitingTasksCount === 0) {
@@ -1269,7 +1272,7 @@ export class AssetsManager {
                 this.onTasksDoneObservable.notifyObservers(this._tasks);
             } catch (e) {
                 Logger.Error("Error running tasks-done callbacks.");
-                console.log(e);
+                Logger.Log(e);
             }
             this._isLoading = false;
             if (this.autoHideLoadingUI) {

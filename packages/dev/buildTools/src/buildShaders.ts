@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import * as fs from "fs";
 import * as path from "path";
 import { checkDirectorySync, checkArgs, getHashOfFile, getHashOfContent } from "./utils.js";
@@ -28,6 +29,7 @@ ShaderStore.##SHADERSTORE_PLACEHOLDER##[name] = shader;
 /**
  * Get the shaders name from their path.
  * @param filename
+ * @returns the shader name
  */
 function getShaderName(filename: string) {
     const parts = filename.split(".");
@@ -41,6 +43,7 @@ function getShaderName(filename: string) {
 /**
  * Get the shaders included in the current one to generate to proper imports.
  * @param sourceCode
+ * @returns the includes
  */
 function getIncludes(sourceCode: string) {
     const regex = /#include<(.+)>(\((.*)\))*(\[(.*)\])*/g;

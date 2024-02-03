@@ -1,6 +1,6 @@
 import type { FlowGraphContext } from "../../../flowGraphContext";
 import type { FlowGraphSignalConnection } from "../../../flowGraphSignalConnection";
-import { FlowGraphWithOnDoneExecutionBlock } from "../../../flowGraphWithOnDoneExecutionBlock";
+import { FlowGraphExecutionBlockWithOutSignal } from "../../../flowGraphExecutionBlockWithOutSignal";
 import type { IFlowGraphBlockConfiguration } from "../../../flowGraphBlock";
 import { RegisterClass } from "../../../../Misc/typeStore";
 /**
@@ -18,7 +18,7 @@ export interface IFlowGraphWaitAllBlockConfiguration extends IFlowGraphBlockConf
  * @experimental
  * A block that waits for all input flows to be activated before activating its output flow.
  */
-export class FlowGraphWaitAllBlock extends FlowGraphWithOnDoneExecutionBlock {
+export class FlowGraphWaitAllBlock extends FlowGraphExecutionBlockWithOutSignal {
     /**
      * Input connection: Resets the block.
      */
@@ -29,13 +29,15 @@ export class FlowGraphWaitAllBlock extends FlowGraphWithOnDoneExecutionBlock {
     public readonly inFlows: FlowGraphSignalConnection[] = [];
     private _cachedActivationState: boolean[] = [];
 
-    constructor(public config: IFlowGraphWaitAllBlockConfiguration) {
+    constructor(
+        /**
+         * the configuration of the block
+         */
+        public config: IFlowGraphWaitAllBlockConfiguration
+    ) {
         super(config);
 
         this.reset = this._registerSignalInput("reset");
-    }
-
-    configure(): void {
         // The first inFlow is the default input signal all execution blocks have
         for (let i = 1; i < this.config.numberInputFlows; i++) {
             this.inFlows.push(this._registerSignalInput(`in${i}`));
@@ -64,7 +66,7 @@ export class FlowGraphWaitAllBlock extends FlowGraphWithOnDoneExecutionBlock {
             for (let i = 0; i < this.config.numberInputFlows; i++) {
                 activationState[i] = false;
             }
-        } else if (callingSignal === this.onStart) {
+        } else if (callingSignal === this.in) {
             activationState[0] = true;
         } else {
             const index = this.inFlows.indexOf(callingSignal);
@@ -76,17 +78,24 @@ export class FlowGraphWaitAllBlock extends FlowGraphWithOnDoneExecutionBlock {
         context._setExecutionVariable(this, "activationState", activationState.slice());
 
         if (activationState.every((value: boolean) => value)) {
-            this.onDone._activateSignal(context);
+            this.out._activateSignal(context);
             for (let i = 0; i < this.config.numberInputFlows; i++) {
                 activationState[i] = false;
             }
         }
     }
 
+    /**
+     * @returns class name of the block.
+     */
     public getClassName(): string {
         return "FGWaitAllBlock";
     }
 
+    /**
+     * Serializes this block into a object
+     * @param serializationObject the object to serialize to
+     */
     public serialize(serializationObject?: any): void {
         super.serialize(serializationObject);
         serializationObject.config.numberInputFlows = this.config.numberInputFlows;

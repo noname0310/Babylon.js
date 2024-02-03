@@ -5,6 +5,7 @@ import type { FlowGraphAsyncExecutionBlock } from "./flowGraphAsyncExecutionBloc
 import type { FlowGraphBlock } from "./flowGraphBlock";
 import type { FlowGraphDataConnection } from "./flowGraphDataConnection";
 import type { FlowGraph } from "./flowGraph";
+import type { ISerializedFlowGraphContext } from "./typeDefinitions";
 import { defaultValueParseFunction, defaultValueSerializationFunction } from "./serialization";
 import type { FlowGraphCoordinator } from "./flowGraphCoordinator";
 import { Observable } from "../Misc/observable";
@@ -23,6 +24,25 @@ export interface IFlowGraphContextConfiguration {
      */
     readonly coordinator: FlowGraphCoordinator;
 }
+
+/**
+ * @experimental
+ * Options for parsing a context.
+ */
+export interface IFlowGraphContextParseOptions {
+    /**
+     * A function that parses a value from a serialization object.
+     * @param key the key of the value
+     * @param serializationObject the object containing the value
+     * @param scene the current scene
+     * @returns
+     */
+    readonly valueParseFunction?: (key: string, serializationObject: any, scene: Scene) => any;
+    /**
+     * The graph that the context is being parsed in.
+     */
+    readonly graph: FlowGraph;
+}
 /**
  * @experimental
  * The context represents the current state and execution of the flow graph.
@@ -37,10 +57,9 @@ export class FlowGraphContext {
     @serialize()
     public uniqueId = RandomGUID();
     /**
-     * @internal
      * These are the variables defined by a user.
      */
-    public _userVariables: { [key: string]: any } = {};
+    private _userVariables: { [key: string]: any } = {};
     /**
      * These are the variables set by the blocks.
      */
@@ -73,8 +92,8 @@ export class FlowGraphContext {
 
     /**
      * Check if a user-defined variable is defined.
-     * @param name
-     * @returns
+     * @param name the name of the variable
+     * @returns true if the variable is defined
      */
     public hasVariable(name: string) {
         return name in this._userVariables;
@@ -82,8 +101,8 @@ export class FlowGraphContext {
 
     /**
      * Set a user-defined variable.
-     * @param name
-     * @param value
+     * @param name the name of the variable
+     * @param value the value of the variable
      */
     public setVariable(name: string, value: any) {
         this._userVariables[name] = value;
@@ -91,11 +110,18 @@ export class FlowGraphContext {
 
     /**
      * Get a user-defined variable.
-     * @param name
-     * @returns
+     * @param name the name of the variable
+     * @returns the value of the variable
      */
     public getVariable(name: string): any {
         return this._userVariables[name];
+    }
+
+    /**
+     * Gets all user variables map
+     */
+    public get userVariables() {
+        return this._userVariables;
     }
 
     private _getUniqueIdPrefixedName(obj: FlowGraphBlock, name: string): string {
@@ -259,6 +285,9 @@ export class FlowGraphContext {
         }
     }
 
+    /**
+     * @returns the class name of the object.
+     */
     public getClassName() {
         return "FGContext";
     }
@@ -266,16 +295,12 @@ export class FlowGraphContext {
     /**
      * Parses a context
      * @param serializationObject the object containing the context serialization values
-     * @param graph the graph to which the context should belong
-     * @param valueParseFunction a function to parse complex values
+     * @param options the options for parsing the context
      * @returns
      */
-    public static Parse(
-        serializationObject: any = {},
-        graph: FlowGraph,
-        valueParseFunction: (key: string, serializationObject: any, scene: Scene) => any = defaultValueParseFunction
-    ): FlowGraphContext {
-        const result = graph.createContext();
+    public static Parse(serializationObject: ISerializedFlowGraphContext, options: IFlowGraphContextParseOptions): FlowGraphContext {
+        const result = options.graph.createContext();
+        const valueParseFunction = options.valueParseFunction ?? defaultValueParseFunction;
         result.uniqueId = serializationObject.uniqueId;
         for (const key in serializationObject._userVariables) {
             const value = valueParseFunction(key, serializationObject._userVariables, result._configuration.scene);

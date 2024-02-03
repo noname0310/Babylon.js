@@ -2,9 +2,9 @@ import type { FlowGraphContext } from "../../../flowGraphContext";
 import type { FlowGraphDataConnection } from "../../../flowGraphDataConnection";
 import { RichTypeBoolean } from "../../../flowGraphRichTypes";
 import type { FlowGraphSignalConnection } from "../../../flowGraphSignalConnection";
-import { FlowGraphWithOnDoneExecutionBlock } from "../../../flowGraphWithOnDoneExecutionBlock";
 import type { IFlowGraphBlockConfiguration } from "../../../flowGraphBlock";
 import { RegisterClass } from "../../../../Misc/typeStore";
+import { FlowGraphExecutionBlockWithOutSignal } from "../../../flowGraphExecutionBlockWithOutSignal";
 /**
  * @experimental
  * Configuration for the while loop block.
@@ -20,7 +20,7 @@ export interface IFlowGraphWhileLoopBlockConfiguration extends IFlowGraphBlockCo
  * @experimental
  * A block that executes a branch while a condition is true.
  */
-export class FlowGraphWhileLoopBlock extends FlowGraphWithOnDoneExecutionBlock {
+export class FlowGraphWhileLoopBlock extends FlowGraphExecutionBlockWithOutSignal {
     /**
      * Input connection: The condition to evaluate.
      */
@@ -30,7 +30,12 @@ export class FlowGraphWhileLoopBlock extends FlowGraphWithOnDoneExecutionBlock {
      */
     public readonly loopBody: FlowGraphSignalConnection;
 
-    constructor(public config?: IFlowGraphWhileLoopBlockConfiguration) {
+    constructor(
+        /**
+         * the configuration of the block
+         */
+        public config?: IFlowGraphWhileLoopBlockConfiguration
+    ) {
         super(config);
 
         this.condition = this.registerDataInput("condition", RichTypeBoolean);
@@ -46,16 +51,28 @@ export class FlowGraphWhileLoopBlock extends FlowGraphWithOnDoneExecutionBlock {
             this.loopBody._activateSignal(context);
             conditionValue = this.condition.getValue(context);
         }
-        this.onDone._activateSignal(context);
+        this.out._activateSignal(context);
     }
 
+    /**
+     * @returns class name of the block.
+     */
     public getClassName(): string {
-        return "FGWhileLoopBlock";
+        return FlowGraphWhileLoopBlock.ClassName;
     }
 
+    /**
+     * the class name of the block.
+     */
+    public static ClassName = "FGWhileLoopBlock";
+
+    /**
+     * Serializes the block to a JSON object.
+     * @param serializationObject the object to serialize to.
+     */
     public serialize(serializationObject?: any): void {
         super.serialize(serializationObject);
         serializationObject.isDo = this.config?.isDo;
     }
 }
-RegisterClass("FGWhileLoopBlock", FlowGraphWhileLoopBlock);
+RegisterClass(FlowGraphWhileLoopBlock.ClassName, FlowGraphWhileLoopBlock);

@@ -3,11 +3,45 @@ import { FlowGraphConnectionType } from "./flowGraphConnection";
 import type { FlowGraphContext } from "./flowGraphContext";
 import { FlowGraphDataConnection } from "./flowGraphDataConnection";
 import type { RichType } from "./flowGraphRichTypes";
-import { Tools } from "core/Misc/tools";
-import { FlowGraphExecutionBlock } from "./flowGraphExecutionBlock";
+import { Tools } from "../Misc/tools";
+import type { ISerializedFlowGraphBlock, IObjectAccessor } from "./typeDefinitions";
+import { defaultValueParseFunction, defaultValueSerializationFunction, needsPathConverter } from "./serialization";
+import type { Scene } from "../scene";
+import type { IPathToObjectConverter } from "../ObjectModel/objectModelInterfaces";
 
+/**
+ * @experimental
+ * Options for parsing a block.
+ */
+export interface IFlowGraphBlockParseOptions {
+    /**
+     * A function that parses a value from a serialization object.
+     * @param key the key of the property
+     * @param serializationObject the serialization object where the property is located
+     * @param scene the scene that the block is being parsed in
+     * @returns the parsed value
+     */
+    valueParseFunction?: (key: string, serializationObject: any, scene: Scene) => any;
+    /**
+     * The scene that the block is being parsed in.
+     */
+    scene: Scene;
+    /**
+     * The path converter to use to convert the path to an object accessor.
+     */
+    pathConverter: IPathToObjectConverter<IObjectAccessor>;
+}
+
+/**
+ * @experimental
+ * Configuration for a block.
+ */
 export interface IFlowGraphBlockConfiguration {
+    /**
+     * The name of the block.
+     */
     name?: string;
+    [extraPropertyKey: string]: any;
 }
 
 /**
@@ -34,13 +68,20 @@ export class FlowGraphBlock {
      */
     public dataOutputs: FlowGraphDataConnection<any>[];
 
-    /** Constructor is protected so only subclasses can be instantiated */
-    protected constructor(public config?: IFlowGraphBlockConfiguration) {
-        this.configure();
-    }
+    /**
+     * Metadata that can be used by the block.
+     */
+    public metadata: any;
 
-    public configure() {
-        // overriden in child classes, uses config
+    /** Constructor is protected so only subclasses can be instantiated
+     * @param config optional configuration for this block
+     */
+    protected constructor(
+        /**
+         * the configuration of the block
+         */
+        public config?: IFlowGraphBlockConfiguration
+    ) {
         this.name = this.config?.name ?? this.getClassName();
         this.dataInputs = [];
         this.dataOutputs = [];
@@ -53,23 +94,54 @@ export class FlowGraphBlock {
         // empty by default, overriden in data blocks
     }
 
-    public registerDataInput<T>(name: string, className: RichType<T>): FlowGraphDataConnection<T> {
-        const input = new FlowGraphDataConnection(name, FlowGraphConnectionType.Input, this, className);
+    /**
+     * Registers a data input on the block.
+     * @param name the name of the input
+     * @param richType the type of the input
+     * @returns the created connection
+     */
+    public registerDataInput<T>(name: string, richType: RichType<T>): FlowGraphDataConnection<T> {
+        const input = new FlowGraphDataConnection(name, FlowGraphConnectionType.Input, this, richType);
         this.dataInputs.push(input);
         return input;
     }
 
-    public registerDataOutput<T>(name: string, className: RichType<T>): FlowGraphDataConnection<T> {
-        const output = new FlowGraphDataConnection(name, FlowGraphConnectionType.Output, this, className);
+    /**
+     * Registers a data output on the block.
+     * @param name the name of the input
+     * @param richType the type of the input
+     * @returns the created connection
+     */
+    public registerDataOutput<T>(name: string, richType: RichType<T>): FlowGraphDataConnection<T> {
+        const output = new FlowGraphDataConnection(name, FlowGraphConnectionType.Output, this, richType);
         this.dataOutputs.push(output);
         return output;
     }
 
+    /**
+     * Given the name of a data input, returns the connection if it exists
+     * @param name the name of the input
+     * @returns the connection if it exists, undefined otherwise
+     */
     public getDataInput(name: string): FlowGraphDataConnection<any> | undefined {
         return this.dataInputs.find((i) => i.name === name);
     }
 
-    public serialize(serializationObject: any = {}) {
+    /**
+     * Given the name of a data output, returns the connection if it exists
+     * @param name the name of the output
+     * @returns the connection if it exists, undefined otherwise
+     */
+    public getDataOutput(name: string): FlowGraphDataConnection<any> | undefined {
+        return this.dataOutputs.find((i) => i.name === name);
+    }
+
+    /**
+     * Serializes this block
+     * @param serializationObject the object to serialize to
+     * @param _valueSerializeFunction a function that serializes a specific value
+     */
+    public serialize(serializationObject: any = {}, _valueSerializeFunction: (key: string, value: any, serializationObject: any) => any = defaultValueSerializationFunction) {
         serializationObject.uniqueId = this.uniqueId;
         serializationObject.config = {};
         if (this.config) {
@@ -90,40 +162,52 @@ export class FlowGraphBlock {
         }
     }
 
+    /**
+     * Gets the class name of this block
+     * @returns the class name
+     */
     public getClassName() {
         return "FGBlock";
     }
 
-    public static Parse(serializationObject: any): FlowGraphBlock {
+    /**
+     * Parses a block from a serialization object
+     * @param serializationObject the object to parse from
+     * @param parseOptions options for parsing the block
+     * @returns the parsed block
+     */
+    public static Parse(serializationObject: ISerializedFlowGraphBlock, parseOptions: IFlowGraphBlockParseOptions): FlowGraphBlock {
         const classType = Tools.Instantiate(serializationObject.className);
         const parsedConfig: any = {};
+        const valueParseFunction = parseOptions.valueParseFunction ?? defaultValueParseFunction;
         if (serializationObject.config) {
             for (const key in serializationObject.config) {
-                const value = serializationObject.config[key];
-                if (value && value.className) {
-                    const valueClassType = Tools.Instantiate(value.className);
-                    parsedConfig[key] = valueClassType.prototype.Parse(value);
-                } else {
-                    parsedConfig[key] = value;
-                }
+                parsedConfig[key] = valueParseFunction(key, serializationObject.config, parseOptions.scene);
             }
+        }
+        if (needsPathConverter(serializationObject.className)) {
+            parsedConfig.pathConverter = parseOptions.pathConverter;
         }
         const obj = new classType(parsedConfig);
         obj.uniqueId = serializationObject.uniqueId;
         for (let i = 0; i < serializationObject.dataInputs.length; i++) {
-            obj.dataInputs[i].deserialize(serializationObject.dataInputs[i]);
+            const dataInput = obj.getDataInput(serializationObject.dataInputs[i].name);
+            if (dataInput) {
+                dataInput.deserialize(serializationObject.dataInputs[i]);
+            } else {
+                throw new Error("Could not find data input with name " + serializationObject.dataInputs[i].name + " in block " + serializationObject.className);
+            }
         }
         for (let i = 0; i < serializationObject.dataOutputs.length; i++) {
-            obj.dataOutputs[i].deserialize(serializationObject.dataOutputs[i]);
-        }
-        if (obj instanceof FlowGraphExecutionBlock) {
-            for (let i = 0; i < serializationObject.signalInputs.length; i++) {
-                obj.signalInputs[i].deserialize(serializationObject.signalInputs[i]);
-            }
-            for (let i = 0; i < serializationObject.signalOutputs.length; i++) {
-                obj.signalOutputs[i].deserialize(serializationObject.signalOutputs[i]);
+            const dataOutput = obj.getDataOutput(serializationObject.dataOutputs[i].name);
+            if (dataOutput) {
+                dataOutput.deserialize(serializationObject.dataOutputs[i]);
+            } else {
+                throw new Error("Could not find data output with name " + serializationObject.dataOutputs[i].name + " in block " + serializationObject.className);
             }
         }
+        obj.metadata = serializationObject.metadata;
+        obj.deserialize && obj.deserialize(serializationObject);
         return obj;
     }
 }

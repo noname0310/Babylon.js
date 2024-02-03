@@ -122,6 +122,7 @@ export class AssetContainer extends AbstractScene {
     /**
      * Given a list of nodes, return a topological sorting of them.
      * @param nodes
+     * @returns a sorted array of nodes
      */
     private _topologicalSort(nodes: Node[]): Node[] {
         const nodesUidMap = new Map<number, Node>();
@@ -208,8 +209,8 @@ export class AssetContainer extends AbstractScene {
         }
 
         if (nodesUidMap.size > 0) {
-            console.error("SceneSerializer._topologicalSort: There were unvisited nodes:");
-            nodesUidMap.forEach((node) => console.error(node.name));
+            Logger.Error("SceneSerializer._topologicalSort: There were unvisited nodes:");
+            nodesUidMap.forEach((node) => Logger.Error(node.name));
         }
 
         return sortedNodes;
@@ -230,7 +231,8 @@ export class AssetContainer extends AbstractScene {
 
     /**
      * Check if a specific node is contained in this asset container.
-     * @param node
+     * @param node the node to check
+     * @returns true if the node is contained in this container, otherwise false.
      */
     private _isNodeInContainer(node: Node) {
         if (node instanceof Mesh && this.meshes.indexOf(node) !== -1) {
@@ -250,6 +252,7 @@ export class AssetContainer extends AbstractScene {
 
     /**
      * For every node in the scene, check if its parent node is also in the scene.
+     * @returns true if every node's parent is also in the scene, otherwise false.
      */
     private _isValidHierarchy() {
         for (const node of this.meshes) {
@@ -1054,7 +1057,7 @@ export class AssetContainer extends AbstractScene {
     /**
      * @since 6.26.0
      * Given a root asset, this method will traverse its hierarchy and add it, its children and any materials/skeletons/animation groups to the container.
-     * @param root
+     * @param root root node
      */
     public addAllAssetsToContainer(root: Node) {
         if (!root) {
