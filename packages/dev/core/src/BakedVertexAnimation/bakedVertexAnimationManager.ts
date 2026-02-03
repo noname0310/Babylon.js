@@ -129,8 +129,12 @@ export class BakedVertexAnimationManager implements IBakedVertexAnimationManager
             return;
         }
 
-        const size = this._texture.getSize();
-        effect.setFloat2("bakedVertexAnimationTextureSizeInverted", 1.0 / size.width, 1.0 / size.height);
+        const engine = this._scene.getEngine();
+        if (!engine.isWebGPU && engine.version < 2) {
+            // Bind texture size inversed for WebGL1
+            const size = this._texture.getSize();
+            effect.setFloat2("bakedVertexAnimationTextureSizeInverted", 1.0 / size.width, 1.0 / size.height);
+        }
         effect.setFloat("bakedVertexAnimationTime", this.time);
 
         if (!useInstances) {

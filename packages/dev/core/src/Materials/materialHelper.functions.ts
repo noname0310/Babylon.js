@@ -450,7 +450,7 @@ export function BindBonesParameters(mesh?: AbstractMesh, effect?: Effect, prePas
             const boneTexture = skeleton.getTransformMatrixTexture(mesh);
             effect.setTexture("boneSampler", boneTexture);
             if (isWebGL1) {
-                // WebGL1 not support textureSize function
+                // WebGL1 not support texelFetch function
                 effect.setFloat("boneTextureWidth", 4.0 * (skeleton.bones.length + 1));
             }
         } else {
