@@ -443,10 +443,16 @@ export function BindBonesParameters(mesh?: AbstractMesh, effect?: Effect, prePas
     if (mesh.useBones && mesh.computeBonesUsingShaders && mesh.skeleton) {
         const skeleton = mesh.skeleton;
 
-        if (skeleton.isUsingTextureForMatrices && effect.getUniformIndex("boneTextureWidth") > -1) {
+        const engine = mesh.getScene().getEngine();
+        const isWebGL1 = !engine.isWebGPU && engine.version < 2;
+
+        if (skeleton.isUsingTextureForMatrices && (!isWebGL1 || effect.getUniformIndex("boneTextureWidth") > -1)) {
             const boneTexture = skeleton.getTransformMatrixTexture(mesh);
             effect.setTexture("boneSampler", boneTexture);
-            effect.setFloat("boneTextureWidth", 4.0 * (skeleton.bones.length + 1));
+            if (isWebGL1) {
+                // WebGL1 not support textureSize function
+                effect.setFloat("boneTextureWidth", 4.0 * (skeleton.bones.length + 1));
+            }
         } else {
             const matrices = skeleton.getTransformMatrices(mesh);
 
