@@ -56,6 +56,22 @@ export interface ISelectionOutlineLayerOptions extends IThinSelectionOutlineLaye
  */
 export class SelectionOutlineLayer extends EffectLayer {
     /**
+     * Optimized brute force 3 directional sampling
+     *
+     * This method uses 1 center sample and 3 additional samples to compute the outline mask
+     * It is optimized but may produce artifacts when the outline thickness is set to high values.
+     */
+    public static readonly OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING = ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING;
+
+    /**
+     * Brute force 8 directional sampling
+     *
+     * This method uses 1 center sample and 8 additional samples to compute the outline mask
+     * It is more precise but less optimized.
+     */
+    public static readonly OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING = ThinSelectionOutlineLayer.OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING;
+
+    /**
      * Effect Name of the selection outline layer.
      */
     public static get EffectName() {
@@ -136,6 +152,7 @@ export class SelectionOutlineLayer extends EffectLayer {
             mainTextureFormat: Constants.TEXTUREFORMAT_RG,
             forceGLSL: false,
             storeCameraSpaceZ: false,
+            outlineMethod: ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING,
             ...options,
         };
 

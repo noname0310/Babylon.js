@@ -33,12 +33,35 @@ export interface IThinSelectionOutlineLayerOptions extends IThinEffectLayerOptio
      * Specifies whether the depth stored is the Z coordinate in camera space.
      */
     storeCameraSpaceZ?: boolean;
+
+    /**
+     * Outline method to use (default: ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING)
+     *
+     * @see {@link ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING}
+     */
+    outlineMethod?: number;
 }
 
 /**
  * @internal
  */
 export class ThinSelectionOutlineLayer extends ThinEffectLayer {
+    /**
+     * Optimized brute force 3 directional sampling
+     *
+     * This method uses 1 center sample and 3 additional samples to compute the outline mask
+     * It is optimized but may produce artifacts when the outline thickness is set to high values.
+     */
+    public static readonly OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING = 0;
+
+    /**
+     * Brute force 8 directional sampling
+     *
+     * This method uses 1 center sample and 8 additional samples to compute the outline mask
+     * It is more precise but less optimized.
+     */
+    public static readonly OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING = 1;
+
     /**
      * Effect Name of the layer.
      */
@@ -110,6 +133,7 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
             mainTextureType: Constants.TEXTURETYPE_FLOAT,
             mainTextureFormat: Constants.TEXTUREFORMAT_RG,
             storeCameraSpaceZ: false,
+            outlineMethod: ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING,
             ...options,
         };
 
@@ -593,6 +617,14 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
     public override _addCustomEffectDefines(defines: string[]): void {
         if (this._options.storeCameraSpaceZ) {
             defines.push("#define STORE_CAMERASPACE_Z");
+        }
+        switch (this._options.outlineMethod) {
+            case ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING:
+                defines.push("#define OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING");
+                break;
+            case ThinSelectionOutlineLayer.OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING:
+                defines.push("#define OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING");
+                break;
         }
     }
 
