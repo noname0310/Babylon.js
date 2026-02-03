@@ -24,14 +24,14 @@ void main(void) {
     // sample mask texture for edge detection and depth-based occlusion
 
     // sample mask texture at center and neighboring pixels
-#if defined(OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING) || defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_TRIDIRECTIONAL) || defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     vec2 maskTopCenter = texture2D(maskSampler, vUV + vec2(0.0, sampleOffset.y)).rg;
     vec2 maskTopRight = texture2D(maskSampler, vUV + sampleOffset).rg;
 
     vec2 maskMiddleCenter = texture2D(maskSampler, vUV).rg;
     vec2 maskMiddleRight = texture2D(maskSampler, vUV + vec2(sampleOffset.x, 0.0)).rg;
 #endif
-#if defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     vec2 maskTopLeft = texture2D(maskSampler, vUV + vec2(-sampleOffset.x, sampleOffset.y)).rg;
 
     vec2 maskMiddleLeft = texture2D(maskSampler, vUV + vec2(-sampleOffset.x, 0.0)).rg;
@@ -42,7 +42,7 @@ void main(void) {
 #endif
     
     // compute outline mask
-#ifdef OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING
+#ifdef OUTLINELAYER_SAMPLING_TRIDIRECTIONAL
     // gradient magnitude edge detection
     vec3 gradient = vec3(
         maskMiddleCenter.r - maskMiddleRight.r,
@@ -50,8 +50,7 @@ void main(void) {
         maskMiddleCenter.r - maskTopRight.r
     );
     float edgeStrength = length(gradient);
-#endif
-#ifdef OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING
+#elif defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     float gradientX = 
         (maskTopLeft.r + 2.0 * maskMiddleLeft.r + maskBottomLeft.r) -
         (maskTopRight.r + 2.0 * maskMiddleRight.r + maskBottomRight.r);
@@ -63,14 +62,14 @@ void main(void) {
     float outlineMask = step(0.5, edgeStrength); // 0.5 is the outline threshold
 
     // sample depth texture for depth-based occlusion
-#if defined(OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING) || defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_TRIDIRECTIONAL) || defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     float depthTopCenter = texture2D(depthSampler, vUV + vec2(0.0, sampleOffset.y)).r;
     float depthTopRight = texture2D(depthSampler, vUV + sampleOffset).r;
 
     float depthMiddleCenter = texture2D(depthSampler, vUV).r;
     float depthMiddleRight = texture2D(depthSampler, vUV + vec2(sampleOffset.x, 0.0)).r;
 #endif
-#if defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     float depthTopLeft = texture2D(depthSampler, vUV + vec2(-sampleOffset.x, sampleOffset.y)).r;
 
     float depthMiddleLeft = texture2D(depthSampler, vUV + vec2(-sampleOffset.x, 0.0)).r;
@@ -81,14 +80,14 @@ void main(void) {
 #endif
 
     // compute occlusion factor based on depth differences
-#if defined(OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING) || defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_TRIDIRECTIONAL) || defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     float occlusionTopCenter = step(occlusionThreshold, abs(maskTopCenter.g - depthTopCenter));
     float occlusionTopRight = step(occlusionThreshold, abs(maskTopRight.g - depthTopRight));
 
     float occlusionMiddleCenter = step(occlusionThreshold, abs(maskMiddleCenter.g - depthMiddleCenter));
     float occlusionMiddleRight = step(occlusionThreshold, abs(maskMiddleRight.g - depthMiddleRight));
 #endif
-#if defined(OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING)
+#if defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     float occlusionTopLeft = step(occlusionThreshold, abs(maskTopLeft.g - depthTopLeft));
 
     float occlusionMiddleLeft = step(occlusionThreshold, abs(maskMiddleLeft.g - depthMiddleLeft));
@@ -99,12 +98,11 @@ void main(void) {
 #endif
 
     float occlusionFactor = occlusionMiddleCenter;
-#ifdef OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING
+#ifdef OUTLINELAYER_SAMPLING_TRIDIRECTIONAL
     occlusionFactor = min(occlusionFactor, occlusionTopCenter);
     occlusionFactor = min(occlusionFactor, occlusionTopRight);
     occlusionFactor = min(occlusionFactor, occlusionMiddleRight);
-#endif
-#ifdef OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING
+#elif defined(OUTLINELAYER_SAMPLING_OCTADIRECTIONAL)
     occlusionFactor = min(occlusionFactor, occlusionTopCenter);
     occlusionFactor = min(occlusionFactor, occlusionTopRight);
     occlusionFactor = min(occlusionFactor, occlusionTopLeft);

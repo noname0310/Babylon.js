@@ -35,9 +35,9 @@ export interface IThinSelectionOutlineLayerOptions extends IThinEffectLayerOptio
     storeCameraSpaceZ?: boolean;
 
     /**
-     * Outline method to use (default: ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING)
+     * Outline method to use (default: Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL)
      *
-     * @see {@link ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING}
+     * @see {@link Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL}
      */
     outlineMethod?: number;
 }
@@ -46,22 +46,6 @@ export interface IThinSelectionOutlineLayerOptions extends IThinEffectLayerOptio
  * @internal
  */
 export class ThinSelectionOutlineLayer extends ThinEffectLayer {
-    /**
-     * Optimized brute force 3 directional sampling
-     *
-     * This method uses 1 center sample and 3 additional samples to compute the outline mask
-     * It is optimized but may produce artifacts when the outline thickness is set to high values.
-     */
-    public static readonly OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING = 0;
-
-    /**
-     * Brute force 8 directional sampling
-     *
-     * This method uses 1 center sample and 8 additional samples to compute the outline mask
-     * It is more precise but less optimized.
-     */
-    public static readonly OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING = 1;
-
     /**
      * Effect Name of the layer.
      */
@@ -133,7 +117,7 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
             mainTextureType: Constants.TEXTURETYPE_FLOAT,
             mainTextureFormat: Constants.TEXTUREFORMAT_RG,
             storeCameraSpaceZ: false,
-            outlineMethod: ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING,
+            outlineMethod: Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL,
             ...options,
         };
 
@@ -619,11 +603,11 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
             defines.push("#define STORE_CAMERASPACE_Z");
         }
         switch (this._options.outlineMethod) {
-            case ThinSelectionOutlineLayer.OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING:
-                defines.push("#define OUTLINE_METHOD_OPTIMIZED_BRUTE_FORCE_3DIRECTIONAL_SAMPLING");
+            case Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL:
+                defines.push("#define OUTLINELAYER_SAMPLING_TRIDIRECTIONAL");
                 break;
-            case ThinSelectionOutlineLayer.OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING:
-                defines.push("#define OUTLINE_METHOD_BRUTE_FORCE_8DIRECTIONAL_SAMPLING");
+            case Constants.OUTLINELAYER_SAMPLING_OCTADIRECTIONAL:
+                defines.push("#define OUTLINELAYER_SAMPLING_OCTADIRECTIONAL");
                 break;
         }
     }
