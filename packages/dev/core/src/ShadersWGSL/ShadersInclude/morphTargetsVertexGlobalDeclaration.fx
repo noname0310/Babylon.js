@@ -12,7 +12,7 @@
 			let textureWidth: i32 = i32(uniforms.morphTargetTextureInfo.y);
 			let y: i32 = i32(vertexIndex) / textureWidth;
 			let x: i32 = i32(vertexIndex) % textureWidth;
-			return textureLoad(morphTargets, vec3i(x, y, i32(uniforms.morphTargetTextureIndices[targetIndex])), 0).xyz;
+			return textureLoad(morphTargets, vec2i(x, y), i32(uniforms.morphTargetTextureIndices[targetIndex]), 0).xyz;
 		}
 
 		fn readVector4FromRawSampler(targetIndex : i32, vertexIndex : f32) -> vec4<f32>
@@ -20,7 +20,7 @@
 			let textureWidth: i32 = i32(uniforms.morphTargetTextureInfo.y);	
 			let y: i32 = i32(vertexIndex) / textureWidth;
 			let x: i32 = i32(vertexIndex) % textureWidth;
-			return textureLoad(morphTargets, vec3i(x, y, i32(uniforms.morphTargetTextureIndices[targetIndex])), 0);
+			return textureLoad(morphTargets, vec2i(x, y), i32(uniforms.morphTargetTextureIndices[targetIndex]), 0);
 		}
 	#endif
 #endif

@@ -102,7 +102,7 @@ fn readVector3FromRawSampler(targetIndex : i32, vertexIndex : u32) -> vec3f
     let textureWidth: u32 = u32(settings.morphTargetTextureInfo.y);
     let y: u32 = vertexID / textureWidth;
     let x: u32 = vertexID % textureWidth;
-    return textureLoad(morphTargets, vec3u(x, y, u32(morphTargetTextureIndices[targetIndex])), 0).xyz;
+    return textureLoad(morphTargets, vec2u(x, y), u32(morphTargetTextureIndices[targetIndex]), 0).xyz;
 }
 
 fn readVector4FromRawSampler(targetIndex : i32, vertexIndex : u32) -> vec4f
@@ -111,7 +111,7 @@ fn readVector4FromRawSampler(targetIndex : i32, vertexIndex : u32) -> vec4f
     let textureWidth: u32 = u32(settings.morphTargetTextureInfo.y);
     let y: u32 = vertexID / textureWidth;
     let x: u32 = vertexID % textureWidth;
-    return textureLoad(morphTargets, vec3u(x, y, u32(morphTargetTextureIndices[targetIndex])), 0);
+    return textureLoad(morphTargets, vec2u(x, y), u32(morphTargetTextureIndices[targetIndex]), 0);
 }
 #endif
 
