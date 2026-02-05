@@ -347,6 +347,17 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
 
     /** @internal */
     public override _createMergeEffect(): Effect {
+        const defines: string[] = [];
+        switch (this._options.outlineMethod) {
+            case Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL:
+                defines.push("#define OUTLINELAYER_SAMPLING_TRIDIRECTIONAL");
+                break;
+            case Constants.OUTLINELAYER_SAMPLING_OCTADIRECTIONAL:
+                defines.push("#define OUTLINELAYER_SAMPLING_OCTADIRECTIONAL");
+                break;
+        }
+        const join = defines.join("\n");
+
         return this._engine.createEffect(
             {
                 // glowMapMerge vertex is just a basic vertex shader for drawing a quad. so we reuse it here
@@ -358,7 +369,7 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
                 attributes: [VertexBuffer.PositionKind],
                 uniformsNames: ["screenSize", "outlineColor", "outlineThickness", "occlusionStrength", "occlusionThreshold"],
                 samplers: ["maskSampler", "depthSampler"],
-                defines: "",
+                defines: join,
                 fallbacks: null,
                 onCompiled: null,
                 onError: null,
@@ -601,14 +612,6 @@ export class ThinSelectionOutlineLayer extends ThinEffectLayer {
     public override _addCustomEffectDefines(defines: string[]): void {
         if (this._options.storeCameraSpaceZ) {
             defines.push("#define STORE_CAMERASPACE_Z");
-        }
-        switch (this._options.outlineMethod) {
-            case Constants.OUTLINELAYER_SAMPLING_TRIDIRECTIONAL:
-                defines.push("#define OUTLINELAYER_SAMPLING_TRIDIRECTIONAL");
-                break;
-            case Constants.OUTLINELAYER_SAMPLING_OCTADIRECTIONAL:
-                defines.push("#define OUTLINELAYER_SAMPLING_OCTADIRECTIONAL");
-                break;
         }
     }
 
