@@ -29,6 +29,16 @@ export interface INodeLike {
 }
 
 /**
+ * Options to create a TextRenderer
+ */
+export interface ITextRendererCreationOptions {
+    /** Define the font asset to use */
+    font: FontAsset;
+    /** Buffer size for the text renderer (default: 128) */
+    bufferSize?: number;
+}
+
+/**
  * Class used to render text using MSDF (Multi-channel Signed Distance Field) technique
  * Thanks a lot to the work of Bhushan_Wagh and zb_sj for their amazing work on MSDF for Babylon.js
  * #6RLCWP#16
@@ -40,31 +50,31 @@ export interface INodeLike {
  */
 export class TextRenderer implements IDisposable {
     private readonly _useVAO: boolean = false;
-    private _engine: AbstractEngine;
-    private _shaderLanguage: ShaderLanguage;
+    private readonly _engine: AbstractEngine;
+    private readonly _shaderLanguage: ShaderLanguage;
     private _vertexBuffers: { [key: string]: VertexBuffer } = {};
     private _spriteBuffer: Nullable<Buffer>;
-    private _worldBuffer: Nullable<Buffer>;
-    private _uvBuffer: Nullable<Buffer>;
-    private _drawWrapperBase: DrawWrapper;
-    private _vertexArrayObject: WebGLVertexArrayObject;
-    private _font: FontAsset;
-    private _charMatrices = new Array<number>();
-    private _charUvs = new Array<number>();
+    private _worldBuffer: Nullable<Buffer> = null;
+    private _uvBuffer: Nullable<Buffer> = null;
+    private _drawWrapperBase: Nullable<DrawWrapper> = null;
+    private _vertexArrayObject: Nullable<WebGLVertexArrayObject> = null;
+    private readonly _font: FontAsset;
+    private readonly _charMatrices = new Array<number>();
+    private readonly _charUvs = new Array<number>();
     private _isDirty = true;
     private _baseLine = 0;
 
     // Cache
-    private _scalingMatrix = new ThinMatrix();
-    private _fontScaleMatrix = new ThinMatrix();
-    private _offsetMatrix = new ThinMatrix();
-    private _translationMatrix = new ThinMatrix();
-    private _baseMatrix = new ThinMatrix();
-    private _scaledMatrix = new ThinMatrix();
-    private _localMatrix = new ThinMatrix();
-    private _finalMatrix = new ThinMatrix();
-    private _lineMatrix = new ThinMatrix();
-    private _parentWorldMatrix = new ThinMatrix();
+    private readonly _scalingMatrix = new ThinMatrix();
+    private readonly _fontScaleMatrix = new ThinMatrix();
+    private readonly _offsetMatrix = new ThinMatrix();
+    private readonly _translationMatrix = new ThinMatrix();
+    private readonly _baseMatrix = new ThinMatrix();
+    private readonly _scaledMatrix = new ThinMatrix();
+    private readonly _localMatrix = new ThinMatrix();
+    private readonly _finalMatrix = new ThinMatrix();
+    private readonly _lineMatrix = new ThinMatrix();
+    private readonly _parentWorldMatrix = new ThinMatrix();
 
     /**
      * Gets or sets the color of the text
@@ -144,9 +154,17 @@ export class TextRenderer implements IDisposable {
      */
     public ignoreDepthBuffer = false;
 
-    private constructor(engine: AbstractEngine, shaderLanguage: ShaderLanguage = ShaderLanguage.GLSL, font: FontAsset) {
+    private constructor(engine: AbstractEngine, shaderLanguage: ShaderLanguage = ShaderLanguage.GLSL, options: ITextRendererCreationOptions | FontAsset) {
+        if ((options as FontAsset)._font) {
+            options = { font: options as FontAsset };
+        } else {
+            options = options as ITextRendererCreationOptions;
+        }
+
         this._engine = engine;
         this._shaderLanguage = shaderLanguage;
+
+        const font = options.font;
         this._font = font;
         this._baseLine = font._font.common.lineHeight * font.scale;
 
@@ -158,10 +176,10 @@ export class TextRenderer implements IDisposable {
         this._vertexBuffers["offsets"] = this._spriteBuffer.createVertexBuffer("offsets", 0, 2);
 
         // Instances
-        this._resizeBuffers(128);
+        this._resizeBuffers(options.bufferSize ?? 128);
     }
 
-    private _resizeBuffers(capacity: number) {
+    private _resizeBuffers(capacity: number): void {
         if (this._worldBuffer) {
             this._worldBuffer.dispose();
             this._worldBuffer = null;
@@ -182,7 +200,7 @@ export class TextRenderer implements IDisposable {
         this._vertexBuffers["uvs"] = this._uvBuffer.createVertexBuffer("uvs", 0, 4, 4, true);
     }
 
-    private _setShaders(vertex: string, fragment: string) {
+    private _setShaders(vertex: string, fragment: string): void {
         this._drawWrapperBase?.dispose();
 
         this._drawWrapperBase = new DrawWrapper(this._engine);
@@ -218,14 +236,18 @@ export class TextRenderer implements IDisposable {
      * @param options define the options to use for the paragraph (optional)
      * @param worldMatrix define the world matrix to use for the paragraph (optional)
      */
-    public addParagraph(text: string, options?: Partial<ParagraphOptions>, worldMatrix?: IMatrixLike) {
+    public addParagraph(text: string, options?: Partial<ParagraphOptions>, worldMatrix?: IMatrixLike): void {
         const paragraph = new SdfTextParagraph(text, this._font, options);
 
         const fontScale = this._font.scale;
 
         const texWidth = this._font._font.common.scaleW;
         const texHeight = this._font._font.common.scaleH;
-        const glyphs = paragraph.glyphs.filter((g) => g.char.page >= 0);
+
+        const glyphs: SdfGlyph[] = [];
+        for (let i = 0; i < paragraph.glyphs.length; ++i) {
+            if (paragraph.glyphs[i].char.page >= 0) glyphs.push(paragraph.glyphs[i]);
+        }
 
         let worldMatrixToUse = worldMatrix;
 
@@ -239,18 +261,22 @@ export class TextRenderer implements IDisposable {
         ScalingMatrixToRef(fontScale, fontScale, 1.0, this._fontScaleMatrix);
         TranslationMatrixToRef(0.5, -0.5, 0, this._offsetMatrix);
 
-        const charsUvsBase = this._charUvs.length;
+        const charUvs = this._charUvs;
+
+        const charsUvsBase = charUvs.length;
         const matricesBase = this._charMatrices.length;
-        glyphs.forEach((g, i) => {
-            this._charUvs[charsUvsBase + i * 4 + 0] = g.char.x / texWidth;
-            this._charUvs[charsUvsBase + i * 4 + 1] = g.char.y / texHeight;
-            this._charUvs[charsUvsBase + i * 4 + 2] = g.char.width / texWidth;
-            this._charUvs[charsUvsBase + i * 4 + 3] = g.char.height / texHeight;
+        for (let i = 0; i < glyphs.length; ++i) {
+            const g = glyphs[i];
+            const char = g.char;
+            charUvs[charsUvsBase + i * 4 + 0] = char.x / texWidth;
+            charUvs[charsUvsBase + i * 4 + 1] = char.y / texHeight;
+            charUvs[charsUvsBase + i * 4 + 2] = char.width / texWidth;
+            charUvs[charsUvsBase + i * 4 + 3] = char.height / texHeight;
 
-            const x = g.x + g.char.xoffset;
-            const y = 1.0 - (g.y + g.char.yoffset);
+            const x = g.x + char.xoffset;
+            const y = 1.0 - (g.y + char.yoffset);
 
-            ScalingMatrixToRef(g.char.width, g.char.height, 1.0, this._scalingMatrix);
+            ScalingMatrixToRef(char.width, char.height, 1.0, this._scalingMatrix);
             MultiplyMatricesToRef(this._offsetMatrix, this._scalingMatrix, this._baseMatrix);
 
             TranslationMatrixToRef(x * fontScale, y * fontScale, 0.0, this._translationMatrix);
@@ -259,11 +285,21 @@ export class TextRenderer implements IDisposable {
 
             MultiplyMatricesToRef(this._localMatrix, worldMatrixToUse, this._finalMatrix);
             CopyMatrixToArray(this._finalMatrix, this._charMatrices, matricesBase + i * 16);
-        });
+        }
 
         this._isDirty = true;
 
         this._baseLine -= paragraph.lineHeight * fontScale * paragraph.lines.length;
+    }
+
+    /**
+     * Clear all the paragraphs added to the text renderer
+     */
+    public clearParagraphs(): void {
+        this._charMatrices.length = 0;
+        this._charUvs.length = 0;
+        this._isDirty = true;
+        this._baseLine = this._font._font.common.lineHeight * this._font.scale;
     }
 
     /**
@@ -272,7 +308,7 @@ export class TextRenderer implements IDisposable {
      * @param projectionMatrix define the projection matrix to use
      */
     public render(viewMatrix: IMatrixLike, projectionMatrix: IMatrixLike): void {
-        const drawWrapper = this._drawWrapperBase;
+        const drawWrapper = this._drawWrapperBase!;
 
         const effect = drawWrapper.effect!;
 
