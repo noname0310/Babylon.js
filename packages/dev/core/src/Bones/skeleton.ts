@@ -550,7 +550,7 @@ export class Skeleton implements IAnimatable {
         let requiredTextureHeight = 1;
 
         if (this.isUsingTextureForMatrices) {
-            const maxTextureSize = this.getScene().getEngine().getCaps().maxTextureSize >> 2 << 2; // must be a multiple of 4
+            const maxTextureSize = this.getScene().getEngine().getCaps().maxTextureSize & ~3; // must be a multiple of 4
             if (maxTextureSize < requiredTextureWidth) {
                 requiredTextureWidth = maxTextureSize;
                 requiredTextureHeight = Math.ceil(requiredElementCount / maxTextureSize);
