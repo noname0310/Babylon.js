@@ -25,6 +25,7 @@
         "@dev/materials": "^1.0.0",
         "@dev/serializers": "^1.0.0",
         "@dev/shared-ui-components": "^1.0.0",
+        "@tools/snippet-loader": "^1.0.0",
         "@tools/test-tools": "^1.0.0",
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
