@@ -1635,6 +1635,25 @@ export class Viewer implements IDisposable {
         };
         delete options?.pluginOptions?.gltf?.extensionOptions?.KHR_materials_variants?.onLoaded;
 
+        // Detect SPZ files and set the appropriate plugin extension and options.
+        if (!options?.pluginExtension) {
+            let isSpz = false;
+            if (typeof source === "string") {
+                const extension = GetExtensionFromUrl(source);
+                if (extension && extension.toLowerCase() === ".spz") {
+                    isSpz = true;
+                }
+            } else if (source instanceof File) {
+                if (source.name.toLowerCase().endsWith(".spz")) {
+                    isSpz = true;
+                }
+            }
+            if (isSpz) {
+                options = options ?? {};
+                options.pluginExtension = ".spz";
+            }
+        }
+
         const defaultOptions: LoadAssetContainerOptions = {
             // Pass a progress callback to update the loading progress.
             onProgress,
@@ -1651,6 +1670,10 @@ export class Viewer implements IDisposable {
                         },
                     },
                 },
+                // SPZ files are authored in RUB (Y-up) convention. SPLATFileLoader normally inverts Y
+                // when flipY is falsy, so we set flipY: true here to prevent that default inversion and
+                // keep the content Y-up as authored.
+                ...(options?.pluginExtension === ".spz" ? { splat: { flipY: true } } : {}),
             },
         };
 
