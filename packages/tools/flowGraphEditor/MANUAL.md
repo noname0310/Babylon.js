@@ -48,7 +48,13 @@ The loaded scene's objects (meshes, lights, cameras, etc.) become available as r
 
 ## Graph Controls
 
-The toolbar at the top provides execution controls:
+The toolbar at the top provides editing and execution controls:
+
+### Undo / Redo
+
+The **Undo** (↩) and **Redo** (↪) buttons are at the left side of the toolbar. They are disabled when there is nothing to undo or redo. You can also use **Ctrl+Z** / **Cmd+Z** to undo and **Ctrl+Shift+Z** / **Cmd+Shift+Z** to redo.
+
+### Execution Controls
 
 | Button | Label     | Description                                                                                                                                                     |
 | ------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -220,6 +226,9 @@ Signal ports (execution flow) have no type restrictions — any signal output ca
 | ---------------------------------- | --------------------------------------------- |
 | **Delete** / **Backspace**         | Delete selected blocks (removes from graph)   |
 | **Alt+Delete** / **Alt+Backspace** | Delete and auto-reconnect surrounding nodes   |
+| **Ctrl+Z** / **Cmd+Z**             | Undo                                          |
+| **Ctrl+Shift+Z** / **Cmd+Shift+Z** | Redo                                         |
+| **Ctrl+A** / **Cmd+A**             | Select all nodes and frames                   |
 | **Ctrl+C** / **Cmd+C**             | Copy selected blocks (or frames)              |
 | **Ctrl+V** / **Cmd+V**             | Paste copied blocks at cursor position        |
 | **Ctrl+G** / **Cmd+G**             | Create a smart group from selected blocks     |
