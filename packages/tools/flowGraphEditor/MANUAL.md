@@ -346,6 +346,38 @@ Press **Escape** or click the **X** button to close the search bar. All highligh
 
 ---
 
+## Physics Blocks
+
+The editor includes a set of blocks for interacting with the Babylon.js Physics V2 system. These blocks operate on `PhysicsBody` references, which can be obtained from mesh objects that have physics enabled (e.g., via `PhysicsAggregate`).
+
+### Physics Events
+
+| Block                     | Description                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PhysicsCollisionEvent** | Fires whenever a collision occurs on the specified physics body. Outputs the other body, contact point, normal, impulse, and penetration distance. |
+
+### Physics Actions (Execution Blocks)
+
+| Block                    | Description                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **ApplyForce**           | Applies a continuous force to a body at a world-space location. Use in a per-frame loop for sustained forces. |
+| **ApplyImpulse**         | Applies an instantaneous impulse (velocity change) to a body at a world-space location.                       |
+| **SetLinearVelocity**    | Directly sets the linear velocity vector of a body.                                                           |
+| **SetAngularVelocity**   | Directly sets the angular velocity vector of a body.                                                          |
+| **SetPhysicsMotionType** | Changes the body's motion type: 0 = STATIC, 1 = ANIMATED, 2 = DYNAMIC.                                        |
+
+### Physics Data (Read-Only Blocks)
+
+| Block                        | Description                                                    |
+| ---------------------------- | -------------------------------------------------------------- |
+| **GetLinearVelocity**        | Reads the current linear velocity of a physics body.           |
+| **GetAngularVelocity**       | Reads the current angular velocity of a physics body.          |
+| **GetPhysicsMassProperties** | Reads the mass, center of mass, and inertia of a physics body. |
+
+> **Note:** Physics blocks require a scene with Physics V2 enabled and bodies attached to meshes. Without a physics engine loaded, the blocks will report errors at runtime.
+
+---
+
 ## Audio Blocks
 
 The editor includes blocks for controlling audio playback using the Babylon.js Audio V2 system. These blocks operate on `AbstractSound` references (either `StaticSound` or `StreamingSound` instances created via `CreateSoundAsync` / `CreateStreamingSoundAsync`).
