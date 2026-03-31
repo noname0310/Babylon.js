@@ -10,7 +10,24 @@ The Flow Graph Editor is a visual tool for building, debugging, and testing Baby
 
 ## Getting Started
 
-### Loading a Scene
+### Default Scene
+
+When the editor opens without a Playground snippet, a **default scene** is automatically created with:
+
+- An **ArcRotateCamera** (orbit camera with mouse controls)
+- A **HemisphericLight**
+- A **ground plane** (8×8)
+- Three primitive meshes: a **box** (blue), a **sphere** (red), and a **cylinder** (green)
+
+This lets you start building and testing flow graph logic immediately. The default scene is replaced when you load a Playground snippet or drop a scene file.
+
+### Loading a Scene from File
+
+You can drag and drop a `.glb`, `.gltf`, or `.babylon` file onto the **Scene Preview** pane to load it as the test scene. For `.gltf` files that reference separate `.bin` or texture files, drop all files together.
+
+The loaded scene replaces the current scene (default or snippet) and populates the scene context with all objects found in the file.
+
+### Loading a Playground Snippet
 
 The editor can load a Babylon.js Playground snippet as a live scene to test your flow graph against.
 
