@@ -623,13 +623,13 @@ export class AnimatorAvatar {
                 case "rotationQuaternion": {
                     const keys = ta.animation.getKeys();
 
-                    for (let i = 0; i < keys.length - 1; ++i) {
-                        const curQuat = keys[i].value as Quaternion;
-                        const nextQuat = keys[i + 1].value as Quaternion;
+                    for (let j = 0; j < keys.length - 1; ++j) {
+                        const curQuat = keys[j].value as Quaternion;
+                        const nextQuat = keys[j + 1].value as Quaternion;
 
                         if (Math.abs(Quaternion.Dot(curQuat, nextQuat)) < 0.001) {
-                            keys[i + 1].value = curQuat.clone();
-                            i += 1;
+                            keys[j + 1].value = curQuat.clone();
+                            j += 1;
                         }
                     }
                     break;
