@@ -621,7 +621,16 @@ export class Tools {
                     onSuccess();
                 }
             } catch (e) {
-                onError?.(`Unable to load script '${scriptUrl}' in worker`, e);
+                // if in a module type worker, importScripts is not available; use import instead
+                if (e instanceof TypeError) {
+                    import(/* webpackIgnore: true */ scriptUrl)
+                        // eslint-disable-next-line github/no-then -- avoiding changing parent function to async at present
+                        .then(() => onSuccess?.())
+                        // eslint-disable-next-line github/no-then -- avoiding changing parent function to async at present
+                        .catch(() => onError?.(`Unable to load script '${scriptUrl}' in worker`, e));
+                } else {
+                    onError?.(`Unable to load script '${scriptUrl}' in worker`, e);
+                }
             }
             return;
         } else if (!IsWindowObjectExist()) {
