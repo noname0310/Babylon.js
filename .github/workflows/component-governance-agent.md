@@ -11,6 +11,8 @@ secrets:
   SECURITY_PAT:
     value: ${{ secrets.SECURITY_ADVISORY_PAT }}
     description: "PAT with security_advisories:write scope for creating advisories and private forks"
+env:
+  SECURITY_PAT: ${{ secrets.SECURITY_ADVISORY_PAT }}
 network:
   allowed:
     - github
@@ -216,6 +218,7 @@ npm test
 ```
 
 If validation fails:
+
 - Analyze the error output
 - Attempt targeted code fixes for failures caused by the dependency update
 - If code changes were made, note them clearly — they must be highlighted in the PR
@@ -295,10 +298,12 @@ If every alert already had a corresponding draft advisory, exit with `noop`.
 ## Guidelines
 
 ### Privacy
+
 - **Never create public GitHub issues, PRs, or comments with vulnerability details.** All fix work happens in the private advisory fork; notifications come from GitHub's built-in advisory email system.
 - No external notification services are used — everything stays within GitHub's private advisory infrastructure.
 
 ### Scope
+
 - Process only **critical** and **high** severity alerts with available patches.
 - Only update the vulnerable dependency — do not refactor unrelated code.
 - Do **not** use `npm audit fix --force`; stick to semver-compatible updates.
@@ -307,12 +312,14 @@ If every alert already had a corresponding draft advisory, exit with `noop`.
 - When multiple alerts point to the same `package@version`, fix it once and re-verify before moving on.
 
 ### Error Handling
+
 - If advisory creation fails, log the error and continue to the next alert.
 - If the fix fails validation (build or tests), note it in the report and move on.
 - If no safe automated fix is apparent (breaking API change, no compatible parent release, cascading override failures), **stop and report the specific blocker** rather than forcing a speculative upgrade.
 - Always produce a summary, even when every fix failed.
 
 ### Exit with `noop` when
+
 - No open critical/high alerts exist
 - No alerts have patched versions available
 - All alerts already have corresponding draft advisories
