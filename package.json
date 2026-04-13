@@ -156,6 +156,7 @@
         },
         "react-refresh-typescript": {
             "typescript": "$typescript"
-        }
+        },
+        "dompurify": "3.3.3"
     }
 }
