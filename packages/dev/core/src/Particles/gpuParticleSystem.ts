@@ -113,6 +113,21 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
     private _platform: IGPUParticleSystemPlatform;
     private _rebuildingAfterContextLost = false;
 
+    // Emit rate gradient caching (mirrors ThinParticleSystem)
+    private _currentEmitRateGradient: Nullable<FactorGradient> = null;
+    private _currentEmitRate1: number = 0;
+    private _currentEmitRate2: number = 0;
+
+    // Start size gradient caching (mirrors ThinParticleSystem)
+    private _currentStartSizeGradient: Nullable<FactorGradient> = null;
+    private _currentStartSize1: number = 0;
+    private _currentStartSize2: number = 0;
+    private _startSizeGradientFactor: number = 1.0;
+
+    // Life time gradient factor range for per-particle randomization in shader
+    private _lifeTimeGradientMin: number = 1.0;
+    private _lifeTimeGradientMax: number = 1.0;
+
     /**
      * Specifies if the particle system should be serialized
      */
@@ -472,6 +487,29 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
         this._stopped = false;
         this._actualFrame = 0;
         this._preWarmDone = false;
+
+        // Reset emit gradient so it acts the same on every start
+        if (this._emitRateGradients) {
+            if (this._emitRateGradients.length > 0) {
+                this._currentEmitRateGradient = this._emitRateGradients[0];
+                this._currentEmitRate1 = this._currentEmitRateGradient.getFactor();
+                this._currentEmitRate2 = this._currentEmitRate1;
+            }
+            if (this._emitRateGradients.length > 1) {
+                this._currentEmitRate2 = this._emitRateGradients[1].getFactor();
+            }
+        }
+        // Reset start size gradient so it acts the same on every start
+        if (this._startSizeGradients) {
+            if (this._startSizeGradients.length > 0) {
+                this._currentStartSizeGradient = this._startSizeGradients[0];
+                this._currentStartSize1 = this._currentStartSizeGradient.getFactor();
+                this._currentStartSize2 = this._currentStartSize1;
+            }
+            if (this._startSizeGradients.length > 1) {
+                this._currentStartSize2 = this._startSizeGradients[1].getFactor();
+            }
+        }
 
         // Animations
         if (this.beginAnimationOnStart && this.animations && this.animations.length > 0 && this._scene) {
@@ -849,38 +887,36 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
     }
 
     /**
-     * Not supported by GPUParticleSystem
+     * Adds a new start size gradient (please note that this will only work if you set the targetStopDuration property)
+     * @param gradient defines the gradient to use (between 0 and 1)
+     * @param factor defines the start size factor to affect to the specified gradient
+     * @param factor2 defines an additional factor used to define a range ([factor, factor2]) with main value to pick the final value from
      * @returns the current particle system
      */
-    public addEmitRateGradient(): IParticleSystem {
-        // Do nothing as emit rate is not supported by GPUParticleSystem
+    public addStartSizeGradient(gradient: number, factor: number, factor2?: number): IParticleSystem {
+        if (!this._startSizeGradients) {
+            this._startSizeGradients = [];
+        }
+
+        const hadGradients = this._startSizeGradients.length > 0;
+        this._addFactorGradient(this._startSizeGradients, gradient, factor, factor2);
+        if (!hadGradients) {
+            this._resetEffect();
+        }
         return this;
     }
 
     /**
-     * Not supported by GPUParticleSystem
+     * Remove a specific start size gradient
+     * @param gradient defines the gradient to remove
      * @returns the current particle system
      */
-    public removeEmitRateGradient(): IParticleSystem {
-        // Do nothing as emit rate is not supported by GPUParticleSystem
-        return this;
-    }
-
-    /**
-     * Not supported by GPUParticleSystem
-     * @returns the current particle system
-     */
-    public addStartSizeGradient(): IParticleSystem {
-        // Do nothing as start size is not supported by GPUParticleSystem
-        return this;
-    }
-
-    /**
-     * Not supported by GPUParticleSystem
-     * @returns the current particle system
-     */
-    public removeStartSizeGradient(): IParticleSystem {
-        // Do nothing as start size is not supported by GPUParticleSystem
+    public removeStartSizeGradient(gradient: number): IParticleSystem {
+        const hadGradients = this._startSizeGradients && this._startSizeGradients.length > 0;
+        this._removeFactorGradient(this._startSizeGradients, gradient);
+        if (hadGradients && (!this._startSizeGradients || this._startSizeGradients.length === 0)) {
+            this._resetEffect();
+        }
         return this;
     }
 
@@ -967,22 +1003,36 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
     }
 
     /**
-     * Not supported by GPUParticleSystem
+     * Adds a new life time gradient (please note that this will only work if you set the targetStopDuration property)
+     * @param gradient defines the gradient to use (between 0 and 1)
+     * @param factor defines the life time factor to affect to the specified gradient
+     * @param factor2 defines an additional factor used to define a range ([factor, factor2]) with main value to pick the final value from
      * @returns the current particle system
      */
-    public addLifeTimeGradient(): IParticleSystem {
-        //Not supported by GPUParticleSystem
+    public addLifeTimeGradient(gradient: number, factor: number, factor2?: number): IParticleSystem {
+        if (!this._lifeTimeGradients) {
+            this._lifeTimeGradients = [];
+        }
 
+        const hadGradients = this._lifeTimeGradients.length > 0;
+        this._addFactorGradient(this._lifeTimeGradients, gradient, factor, factor2);
+        if (!hadGradients) {
+            this._resetEffect();
+        }
         return this;
     }
 
     /**
-     * Not supported by GPUParticleSystem
+     * Remove a specific life time gradient
+     * @param gradient defines the gradient to remove
      * @returns the current particle system
      */
-    public removeLifeTimeGradient(): IParticleSystem {
-        //Not supported by GPUParticleSystem
-
+    public removeLifeTimeGradient(gradient: number): IParticleSystem {
+        const hadGradients = this._lifeTimeGradients && this._lifeTimeGradients.length > 0;
+        this._removeFactorGradient(this._lifeTimeGradients, gradient);
+        if (hadGradients && (!this._lifeTimeGradients || this._lifeTimeGradients.length === 0)) {
+            this._resetEffect();
+        }
         return this;
     }
 
@@ -1396,6 +1446,13 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
         this._targetBuffer = this._buffer1;
     }
 
+    /**
+     * Forces the update effect to be recreated on the next render.
+     */
+    private _resetEffect() {
+        this._cachedUpdateDefines = "";
+    }
+
     /** @internal */
     public _recreateUpdateEffect() {
         this._createColorGradientTexture();
@@ -1461,6 +1518,14 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
 
         if (this._emitRateControl) {
             defines += "\n#define EMITRATECTRL";
+        }
+
+        if (this._startSizeGradients && this._startSizeGradients.length > 0) {
+            defines += "\n#define STARTSIZEGRADIENTS";
+        }
+
+        if (this._lifeTimeGradients && this._lifeTimeGradients.length > 0) {
+            defines += "\n#define LIFETIMEGRADIENTS";
         }
 
         if (this._platform.isUpdateBufferCreated() && this._cachedUpdateDefines === defines) {
@@ -1916,6 +1981,14 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
             }
         }
 
+        if (this._startSizeGradients && this._startSizeGradients.length > 0) {
+            this._updateBuffer.setFloat("startSizeGradientFactor", this._startSizeGradientFactor);
+        }
+
+        if (this._lifeTimeGradients && this._lifeTimeGradients.length > 0) {
+            this._updateBuffer.setFloat2("lifeTimeGradientRange", this._lifeTimeGradientMin, this._lifeTimeGradientMax);
+        }
+
         this._platform.updateParticleBuffer(this._targetIndex, this._targetBuffer, this._currentActiveCount);
 
         // Switch VAOs
@@ -1973,6 +2046,50 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
         // Get everything ready to render
         this._initialize();
 
+        // Compute effective emit rate, applying emit rate gradients if set
+        let effectiveEmitRate = this.emitRate;
+        if (this._emitRateGradients && this._emitRateGradients.length > 0 && this.targetStopDuration) {
+            const ratio = this._actualFrame / this.targetStopDuration;
+            GradientHelper.GetCurrentGradient(ratio, this._emitRateGradients, (currentGradient, nextGradient, scale) => {
+                if (currentGradient !== this._currentEmitRateGradient) {
+                    this._currentEmitRate1 = this._currentEmitRate2;
+                    this._currentEmitRate2 = (<FactorGradient>nextGradient).getFactor();
+                    this._currentEmitRateGradient = <FactorGradient>currentGradient;
+                }
+                effectiveEmitRate = Lerp(this._currentEmitRate1, this._currentEmitRate2, scale);
+            });
+        }
+
+        // Compute start size and life time gradient factors for shader uniforms
+        if (this.targetStopDuration) {
+            const ratio = this._actualFrame / this.targetStopDuration;
+
+            if (this._startSizeGradients && this._startSizeGradients.length > 0) {
+                GradientHelper.GetCurrentGradient(ratio, this._startSizeGradients, (currentGradient, nextGradient, scale) => {
+                    if (currentGradient !== this._currentStartSizeGradient) {
+                        this._currentStartSize1 = this._currentStartSize2;
+                        this._currentStartSize2 = (<FactorGradient>nextGradient).getFactor();
+                        this._currentStartSizeGradient = <FactorGradient>currentGradient;
+                    }
+                    this._startSizeGradientFactor = Lerp(this._currentStartSize1, this._currentStartSize2, scale);
+                });
+            } else {
+                this._startSizeGradientFactor = 1.0;
+            }
+
+            if (this._lifeTimeGradients && this._lifeTimeGradients.length > 0) {
+                GradientHelper.GetCurrentGradient(ratio, this._lifeTimeGradients, (currentGradient, nextGradient, scale) => {
+                    const current = <FactorGradient>currentGradient;
+                    const next = <FactorGradient>nextGradient;
+                    this._lifeTimeGradientMin = Lerp(current.factor1, next.factor1, scale);
+                    this._lifeTimeGradientMax = Lerp(current.factor2 ?? current.factor1, next.factor2 ?? next.factor1, scale);
+                });
+            } else {
+                this._lifeTimeGradientMin = 1.0;
+                this._lifeTimeGradientMax = 1.0;
+            }
+        }
+
         if (this._emitRateControl) {
             // Emit-rate-controlled mode: limits active particles to ~emitRate * maxLifeTime,
             // matching CPU particle behavior with circular buffer recycling.
@@ -1982,7 +2099,7 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
                 this._accumulatedCount += this.manualEmitCount;
                 this.manualEmitCount = 0;
             } else if (!this._stopped) {
-                this._accumulatedCount += this.emitRate * this._timeDelta;
+                this._accumulatedCount += effectiveEmitRate * this._timeDelta;
             }
 
             // Convert accumulated fractional count into whole particles to emit this frame.
@@ -1999,7 +2116,7 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
             // When emitRate is 0 but manualEmitCount is used, the rate-based steady state
             // would be 0, blocking buffer growth. Use newParticles as a floor so manual
             // emissions can always allocate slots.
-            const steadyStateCount = Math.min(Math.max(Math.ceil(this.emitRate * this.maxLifeTime), newParticles), this._maxActiveParticleCount);
+            const steadyStateCount = Math.min(Math.max(Math.ceil(effectiveEmitRate * this.maxLifeTime), newParticles), this._maxActiveParticleCount);
 
             // During ramp-up, grow the active buffer size by adding new slots.
             // Once _currentActiveCount reaches steadyStateCount, no new slots are added —
@@ -2027,7 +2144,7 @@ export class GPUParticleSystem extends BaseParticleSystem implements IDisposable
                 this._accumulatedCount += this.manualEmitCount;
                 this.manualEmitCount = 0;
             } else {
-                this._accumulatedCount += this.emitRate * this._timeDelta;
+                this._accumulatedCount += effectiveEmitRate * this._timeDelta;
             }
             if (this._accumulatedCount >= 1) {
                 const intPart = this._accumulatedCount | 0;
